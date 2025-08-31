@@ -1,4 +1,3 @@
-# main.py
 import os
 import re
 from datetime import datetime
@@ -30,12 +29,12 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "ano_modelo": None,
             "cor": None,
             "local_emplacamento": None,
-            "transferencia_recente": None,
-            "comunicacao_venda": None,
-            "suspeito": True,
-            "relevante": True,
-            "crime_prf": None,
-            "abordagem_prf": None,
+            "transferencia_recente": False,
+            "comunicacao_venda": False,
+            "suspeito": False,
+            "relevante": False,
+            "crime_prf": False,
+            "abordagem_prf": False,
         },
         "proprietario": {
             "nome": None,
@@ -43,8 +42,8 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cnh": None,
             "validade_cnh": None,
             "local_cnh": None,
-            "suspeito": True,
-            "relevante": True,
+            "suspeito": False,
+            "relevante": False,
             "proprietario": True,
             "condutor": False,
             "possuidor": False,
@@ -55,8 +54,8 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cnh": None,
             "validade_cnh": None,
             "local_cnh": None,
-            "suspeito": True,
-            "relevante": True,
+            "suspeito": False,
+            "relevante": False,
             "proprietario": False,
             "condutor": True,
             "possuidor": False,
@@ -67,8 +66,8 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cnh": None,
             "validade_cnh": None,
             "local_cnh": None,
-            "suspeito": True,
-            "relevante": True,
+            "suspeito": False,
+            "relevante": False,
             "proprietario": False,
             "condutor": False,
             "possuidor": True,
@@ -88,14 +87,14 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
         dados["veiculo"]["local_emplacamento"] = match.group(5).strip()
 
     if "Comunicação de Venda" in texto:
-        dados["veiculo"]["comunicacao_venda"] = "Comunicação de Venda"
+        dados["veiculo"]["comunicacao_venda"] = True
     if "Transferência" in texto:
-        dados["veiculo"]["transferencia_recente"] = "Transferência"
+        dados["veiculo"]["transferencia_recente"] = True
 
     if "BOP" in texto:
-        dados["veiculo"]["crime_prf"] = "BOP"
+        dados["veiculo"]["crime_prf"] = True
     if "PDI" in texto:
-        dados["veiculo"]["abordagem_prf"] = "PDI"
+        dados["veiculo"]["abordagem_prf"] = True
 
     # --- Proprietário ---
     match = re.search(r"Propriet[aá]rio:\s*([A-ZÁÉÍÓÚÃÕÇ\s]+)\s*\(([\d\./-]+)\)", texto, re.IGNORECASE)
@@ -112,40 +111,35 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
         dados["condutor"]["nome"] = match.group(1).strip()
         dados["condutor"]["cpf_cnpj"] = match.group(2).strip()
 
-    # --- Possuidor (captura em duas etapas) ---
+    # --- Possuidor ---
     match = re.search(r"Possuidor:\s*([A-ZÁÉÍÓÚÃÕÇ\s]+)\s*\(([\d\./-]+)\)", texto, re.IGNORECASE)
     if match:
         dados["possuidor"]["nome"] = match.group(1).strip()
         dados["possuidor"]["cpf_cnpj"] = match.group(2).strip()
 
-    if dados["possuidor"]["nome"]:
-        match = re.search(r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(de|Local da CNH)\s*:?( [^\n\r]+)", texto, re.IGNORECASE)
-        if match:
-            dados["possuidor"]["cnh"] = match.group(1).strip()
-            try:
-                dados["possuidor"]["validade_cnh"] = datetime.strptime(match.group(2).strip(), "%d/%m/%Y").date()
-            except ValueError:
-                dados["possuidor"]["validade_cnh"] = None
-            dados["possuidor"]["local_cnh"] = match.group(4).strip()
-
-    # --- CNH genérica (proprietário ou condutor, se não for possuidor) ---
-    match = re.search(
-        r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(de|Local da CNH)\s*:?( [^\n\r]+)",
+    # --- CNH ---
+    cnh_match = re.search(
+        r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(?:de|Local da CNH)\s*:? ([^\n\r]+)",
         texto,
-        re.IGNORECASE
+        re.IGNORECASE | re.DOTALL
     )
-    if match and not dados["possuidor"]["nome"]:
-        cnh = match.group(1).strip()
+    if cnh_match:
+        cnh = cnh_match.group(1).strip()
         try:
-            validade = datetime.strptime(match.group(2).strip(), "%d/%m/%Y").date()
+            validade = datetime.strptime(cnh_match.group(2).strip(), "%d/%m/%Y").date()
         except ValueError:
             validade = None
-        local = match.group(4).strip()
+        local = cnh_match.group(3).strip()
+
         if dados["condutor"]["nome"]:
             dados["condutor"]["cnh"] = cnh
             dados["condutor"]["validade_cnh"] = validade
             dados["condutor"]["local_cnh"] = local
-        else:
+        elif dados["possuidor"]["nome"]:
+            dados["possuidor"]["cnh"] = cnh
+            dados["possuidor"]["validade_cnh"] = validade
+            dados["possuidor"]["local_cnh"] = local
+        elif dados["proprietario"]["nome"]:
             dados["proprietario"]["cnh"] = cnh
             dados["proprietario"]["validade_cnh"] = validade
             dados["proprietario"]["local_cnh"] = local
@@ -154,7 +148,7 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
 
 
 def extrair_passagens(texto: str, placa: str) -> List[Dict[str, object]]:
-    """Extrai passagens do veículo no relatório."""
+    """Extrai passagens do veículo no relatório (com datahora unificada)."""
     passagens = []
     linhas = texto.split("\n")
     for idx, linha in enumerate(linhas):
@@ -164,23 +158,24 @@ def extrair_passagens(texto: str, placa: str) -> List[Dict[str, object]]:
                 estado, municipio, rodovia = partes[0], partes[1], partes[2]
             else:
                 continue
-            data_str, hora_str = None, None
+            datahora_obj = None
             for j in range(idx + 1, min(idx + 10, len(linhas))):
                 match = re.search(r"(\d{2}/\d{2}/\d{4})\s*(\d{2}:\d{2}:\d{2})", linhas[j])
                 if match:
-                    data_str, hora_str = match.group(1), match.group(2)
+                    try:
+                        datahora_obj = datetime.strptime(
+                            f"{match.group(1)} {match.group(2)}", "%d/%m/%Y %H:%M:%S"
+                        )
+                    except ValueError:
+                        datahora_obj = None
                     break
-            if data_str and hora_str:
-                try:
-                    datahora = datetime.strptime(f"{data_str} {hora_str}", "%d/%m/%Y %H:%M:%S")
-                except ValueError:
-                    datahora = None
+            if datahora_obj:
                 passagens.append({
                     "placa": placa,
                     "estado": estado,
                     "municipio": municipio,
                     "rodovia": rodovia,
-                    "datahora": datahora,
+                    "datahora": datahora_obj,
                 })
     return passagens
 
@@ -284,11 +279,10 @@ def processar_pdfs(pasta: str = "entrada_pdfs") -> None:
             dados = extrair_dados(texto, placa)
             passagens = extrair_passagens(texto, placa)
 
-            print(f"\n✅ Dados extraídos de {arquivo}:" )
+            print(f"\n✅ Dados extraídos de {arquivo}:")
             print(dados)
-            print(f"Passagens encontradas: {len(passagens)}") 
+            print(f"Passagens encontradas: {len(passagens)}")
 
-            # 🔹 Agora insere no banco
             inserir_dados(dados, passagens)
             print("💾 Inserido no banco com sucesso!")
 

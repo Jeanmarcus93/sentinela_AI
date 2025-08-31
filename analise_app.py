@@ -1,33 +1,34 @@
 
 import streamlit as st
-import psycopg2
 import pandas as pd
 import plotly.express as px
 from datetime import date
+from sqlalchemy import create_engine, text
 from config import DB_CONFIG
 
 # ---------------- Utils ----------------
 
+def get_engine():
+    return create_engine(
+        f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
+    )
+
 def ensure_schema():
     """Garante que a coluna 'ilicito' exista em passagens."""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cur = conn.cursor()
-        cur.execute("""
-            ALTER TABLE passagens
-            ADD COLUMN IF NOT EXISTS ilicito BOOLEAN DEFAULT FALSE;
-        """)
-        conn.commit()
-        cur.close()
-        conn.close()
+        engine = get_engine()
+        with engine.begin() as conn:
+            conn.execute(text("""
+                ALTER TABLE passagens
+                ADD COLUMN IF NOT EXISTS ilicito BOOLEAN DEFAULT FALSE;
+            """))
     except Exception as e:
         st.warning(f"Não foi possível validar o esquema: {e}")
 
 def carregar_dados(query: str, params=None) -> pd.DataFrame:
-    conn = psycopg2.connect(**DB_CONFIG)
-    df = pd.read_sql(query, conn, params=params)
-    conn.close()
-    return df
+    engine = get_engine()
+    with engine.connect() as conn:
+        return pd.read_sql(text(query), conn, params=params)
 
 # ---------------- App ----------------
 
@@ -36,7 +37,45 @@ st.title("📊 Dashboard de Análise de Veículos e Passagens")
 
 ensure_schema()
 
-# ---- Análise por Município ----
+# ---- Análise de Passagens Ilícitas (no topo) ----
+st.header("🚨 Análise de Passagens com Ilícitos")
+df_ilicitos = carregar_dados(
+    """
+    SELECT municipio, rodovia, EXTRACT(HOUR FROM datahora) AS hora, EXTRACT(DOW FROM datahora) AS dow
+    FROM passagens
+    WHERE ilicito IS TRUE;
+    """
+)
+
+if df_ilicitos.empty:
+    st.info("Nenhum ilícito registrado ainda.")
+else:
+    total_ilicitos = len(df_ilicitos)
+    st.metric("Total de passagens com ilícitos", total_ilicitos)
+
+    # Municípios
+    df_mun = df_ilicitos.groupby("municipio").size().reset_index(name="total").sort_values("total", ascending=False).head(10)
+    fig_mun = px.bar(df_mun, x="municipio", y="total", title="Top Municípios (Ilícitos)")
+    st.plotly_chart(fig_mun, width="stretch")
+
+    # Rodovias
+    df_rodo = df_ilicitos.groupby("rodovia").size().reset_index(name="total").sort_values("total", ascending=False).head(10)
+    fig_rodo = px.bar(df_rodo, x="rodovia", y="total", title="Top Rodovias (Ilícitos)")
+    st.plotly_chart(fig_rodo, width="stretch")
+
+    # Horários
+    df_hora = df_ilicitos.groupby("hora").size().reset_index(name="total")
+    fig_hora = px.bar(df_hora, x="hora", y="total", title="Horários de Movimento (Ilícitos)")
+    st.plotly_chart(fig_hora, width="stretch")
+
+    # Dias da semana
+    dias_map = {0: "Domingo", 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta", 6: "Sábado"}
+    df_ilicitos["dow"] = df_ilicitos["dow"].astype(int).map(dias_map)
+    df_dow = df_ilicitos.groupby("dow").size().reset_index(name="total")
+    fig_dow = px.bar(df_dow, x="dow", y="total", title="Movimento por Dia da Semana (Ilícitos)")
+    st.plotly_chart(fig_dow, width="stretch")
+
+# ---- Análise por Município (geral) ----
 st.header("Top Municípios com mais passagens")
 df_municipios = carregar_dados(
     """
@@ -47,26 +86,11 @@ df_municipios = carregar_dados(
     LIMIT 10;
     """
 )
-fig1 = px.bar(df_municipios, x="municipio", y="total", title="Top 10 Municípios")
-st.plotly_chart(fig1, use_container_width=True)
+fig1 = px.bar(df_municipios, x="municipio", y="total", title="Top 10 Municípios (Geral)")
+st.plotly_chart(fig1, width="stretch")
 
-# ---- Distribuição de suspeitos ----
-st.header("Distribuição de Veículos Suspeitos")
-df_suspeitos = carregar_dados(
-    """
-    SELECT
-        COUNT(*) FILTER (WHERE suspeito IS TRUE) AS suspeitos,
-        COUNT(*) FILTER (WHERE suspeito IS FALSE) AS nao_suspeitos
-    FROM veiculos;
-    """
-)
-df_suspeitos = df_suspeitos.melt(var_name="Categoria", value_name="Quantidade")
-fig2 = px.pie(df_suspeitos, names="Categoria", values="Quantidade",
-              title="Veículos Suspeitos vs Não Suspeitos")
-st.plotly_chart(fig2, use_container_width=True)
-
-# ---- Rodovias ----
-st.header("Rodovias mais frequentes")
+# ---- Rodovias (geral) ----
+st.header("Rodovias mais frequentes (geral)")
 df_rodovia = carregar_dados(
     """
     SELECT rodovia, COUNT(*) as total
@@ -76,11 +100,11 @@ df_rodovia = carregar_dados(
     LIMIT 10;
     """
 )
-fig3 = px.bar(df_rodovia, x="rodovia", y="total", title="Top 10 Rodovias")
-st.plotly_chart(fig3, use_container_width=True)
+fig2 = px.bar(df_rodovia, x="rodovia", y="total", title="Top 10 Rodovias (Geral)")
+st.plotly_chart(fig2, width="stretch")
 
-# ---- Horários de maior movimento ----
-st.header("Horários de maior movimento dos alvos")
+# ---- Horários (geral) ----
+st.header("Horários de maior movimento (geral)")
 df_horarios = carregar_dados(
     """
     SELECT EXTRACT(HOUR FROM datahora) AS hora, COUNT(*) AS total
@@ -89,13 +113,13 @@ df_horarios = carregar_dados(
     ORDER BY hora;
     """
 )
-fig4 = px.bar(df_horarios, x="hora", y="total",
-              title="Movimento por Hora do Dia",
+fig3 = px.bar(df_horarios, x="hora", y="total",
+              title="Movimento por Hora do Dia (Geral)",
               labels={"hora": "Hora do Dia", "total": "Quantidade de Passagens"})
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(fig3, width="stretch")
 
-# ---- Movimento por Dia da Semana ----
-st.header("Movimento por Dia da Semana")
+# ---- Dias da semana (geral) ----
+st.header("Movimento por Dia da Semana (geral)")
 df_dias = carregar_dados(
     """
     SELECT EXTRACT(DOW FROM datahora) AS dia_semana, COUNT(*) AS total
@@ -106,13 +130,13 @@ df_dias = carregar_dados(
 )
 dias_map = {0: "Domingo", 1: "Segunda", 2: "Terça", 3: "Quarta", 4: "Quinta", 5: "Sexta", 6: "Sábado"}
 df_dias["dia_semana"] = df_dias["dia_semana"].astype(int).map(dias_map)
-fig5 = px.bar(df_dias, x="dia_semana", y="total",
-              title="Movimento por Dia da Semana",
+fig4 = px.bar(df_dias, x="dia_semana", y="total",
+              title="Movimento por Dia da Semana (Geral)",
               labels={"dia_semana": "Dia da Semana", "total": "Quantidade de Passagens"})
-st.plotly_chart(fig5, use_container_width=True)
+st.plotly_chart(fig4, width="stretch")
 
-# ---- Inserção Manual de Ilícitos ----
-st.header("✍️ Inserção Manual de Dados de Ilícitos")
+# ---- Inserção Manual de Ilícitos (individual e em lote) ----
+st.header("✍️ Inserção Manual de Dados de Ilícitos (individual e em lote)")
 
 # Selecionar veículo
 df_veiculos = carregar_dados("SELECT id, placa FROM veiculos ORDER BY placa;")
@@ -130,38 +154,72 @@ if placa_escolhida:
         """
         SELECT p.id, p.datahora, p.municipio, p.rodovia, p.ilicito
         FROM passagens p
-        WHERE p.veiculo_id = (SELECT id FROM veiculos WHERE placa = %s)
+        WHERE p.veiculo_id = (SELECT id FROM veiculos WHERE placa = :placa)
         """
     )
-    params = [placa_escolhida]
+    params = {"placa": placa_escolhida}
 
     if data_inicio and data_fim:
-        query_passagens += " AND p.datahora::date BETWEEN %s AND %s"
-        params.extend([data_inicio, data_fim])
+        query_passagens += " AND p.datahora::date BETWEEN :data_inicio AND :data_fim"
+        params.update({"data_inicio": data_inicio, "data_fim": data_fim})
 
     query_passagens += " ORDER BY p.datahora DESC"
 
     df_passagens = carregar_dados(query_passagens, params=params)
 
     if not df_passagens.empty:
-        # Formatar data para BR nas opções
-        opcoes = df_passagens.apply(
-            lambda row: f"{row['id']} | {pd.to_datetime(row['datahora']).strftime('%d/%m/%Y %H:%M:%S')} | {row['municipio']} | {row['rodovia']} | Ilícito: {row['ilicito']}",
-            axis=1
+        # Preparar dados para a tabela editável com checkbox por linha
+        df_edit = df_passagens.copy()
+        df_edit["Data/Hora"] = pd.to_datetime(df_edit["datahora"]).dt.strftime("%d/%m/%Y %H:%M:%S")
+        df_edit = df_edit[["id", "Data/Hora", "municipio", "rodovia", "ilicito"]]
+        df_edit.rename(columns={"ilicito": "Selecionado (ilícito)"}, inplace=True)
+
+        # Caixa "selecionar todas"
+        selecionar_todas = st.checkbox("Selecionar todas as passagens do intervalo", value=False)
+
+        if selecionar_todas:
+            df_edit["Selecionado (ilícito)"] = True
+
+        edited = st.data_editor(
+            df_edit,
+            width="stretch",
+            hide_index=True,
+            num_rows="fixed",
+            column_config={
+                "id": st.column_config.NumberColumn("ID", disabled=True),
+                "Data/Hora": st.column_config.TextColumn("Data/Hora", disabled=True),
+                "municipio": st.column_config.TextColumn("Município", disabled=True),
+                "rodovia": st.column_config.TextColumn("Rodovia", disabled=True),
+                "Selecionado (ilícito)": st.column_config.CheckboxColumn("Selecionado (ilícito)"),
+            },
+            key="editor_passagens"
         )
-        passagem_escolhida = st.selectbox("Selecione a passagem", opcoes)
 
-        ilicito_flag = st.checkbox("Marcar como transporte de ilícito", value=True)
+        # IDs selecionados
+        ids_selecionados = [int(row["id"]) for _, row in edited.iterrows() if row["Selecionado (ilícito)"]]
 
-        if st.button("Salvar"):
-            passagem_id = int(passagem_escolhida.split("|")[0].strip())
-            conn = psycopg2.connect(**DB_CONFIG)
-            cur = conn.cursor()
-            cur.execute("UPDATE passagens SET ilicito = %s WHERE id = %s;", (ilicito_flag, passagem_id))
-            conn.commit()
-            cur.close()
-            conn.close()
-            st.success("✅ Registro atualizado com sucesso!")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("Marcar selecionados como ILÍCITO"):
+                if ids_selecionados:
+                    engine = get_engine()
+                    with engine.begin() as conn:
+                        conn.execute(text("UPDATE passagens SET ilicito = TRUE WHERE id = ANY(:ids)"), {"ids": ids_selecionados})
+                    st.success(f"✅ {len(ids_selecionados)} passagens marcadas como ilícito.")
+                    st.rerun()
+                else:
+                    st.warning("Selecione pelo menos uma passagem.")
+
+        with col_b:
+            if st.button("Desmarcar selecionados (não ilícito)"):
+                if ids_selecionados:
+                    engine = get_engine()
+                    with engine.begin() as conn:
+                        conn.execute(text("UPDATE passagens SET ilicito = FALSE WHERE id = ANY(:ids)"), {"ids": ids_selecionados})
+                    st.success(f"✅ {len(ids_selecionados)} passagens desmarcadas.")
+                    st.rerun()
+                else:
+                    st.warning("Selecione pelo menos uma passagem.")
     else:
         st.info("Nenhuma passagem encontrada para este veículo nesse intervalo de datas.")
 else:
