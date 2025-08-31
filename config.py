@@ -1,73 +1,72 @@
-# -*- coding: utf-8 -*-
-"""
-config.py
-Configurações de banco de dados e criação de tabelas.
-"""
-
-import psycopg2
+import psycopg
 
 DB_CONFIG = {
     "dbname": "veiculos_db",
     "user": "postgres",
-    "password": "Jmkjmk.00",   # ⚠️ use apenas letras/números/underscore
+    "password": "Jmkjmk.00",  # ajuste conforme seu ambiente
     "host": "localhost",
-    "port": "5432"
+    "port": "5432",
 }
 
+
 def criar_tabelas():
-    """Cria as tabelas necessárias no banco, se não existirem."""
-    # Forçar client_encoding em UTF-8 para evitar erros de caracteres
-    conn = psycopg2.connect(**DB_CONFIG, options='-c client_encoding=UTF8')
-    cur = conn.cursor()
+    """Cria/ajusta o esquema com chaves únicas esperadas pelos upserts."""
+    with psycopg.connect(**DB_CONFIG) as conn:
+        with conn.cursor() as cur:
+            # --- veiculos ---
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS veiculos (
+                    id SERIAL PRIMARY KEY,
+                    placa VARCHAR(10) UNIQUE,
+                    marca_modelo VARCHAR(100),
+                    tipo VARCHAR(50),
+                    ano_modelo VARCHAR(20),
+                    cor VARCHAR(30),
+                    local_emplacamento VARCHAR(100),
+                    transferencia_recente VARCHAR(100),
+                    comunicacao_venda VARCHAR(100),
+                    suspeito BOOLEAN DEFAULT FALSE,
+                    relevante BOOLEAN DEFAULT FALSE,
+                    crime_prf VARCHAR(50),
+                    abordagem_prf VARCHAR(50)
+                );
+                """
+            )
 
-    # ---------- Tabela de veículos ----------
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS veiculos (
-            id SERIAL PRIMARY KEY,
-            placa VARCHAR(20) UNIQUE NOT NULL,
-            marca_modelo TEXT,
-            tipo TEXT,
-            ano_modelo TEXT,
-            cor TEXT,
-            local_emplacamento TEXT,
-            transferencia_recente TEXT,
-            suspeito TEXT,
-            relevante TEXT,
-            crime_prf TEXT,
-            abordagem_prf TEXT
-        );
-    """)
+            # --- pessoas ---
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS pessoas (
+                    id SERIAL PRIMARY KEY,
+                    veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
+                    nome VARCHAR(150),
+                    cpf_cnpj VARCHAR(30) UNIQUE,
+                    cnh VARCHAR(20),
+                    validade_cnh DATE,
+                    local_cnh VARCHAR(100),
+                    suspeito BOOLEAN DEFAULT FALSE,
+                    relevante BOOLEAN DEFAULT FALSE,
+                    proprietario BOOLEAN DEFAULT FALSE,
+                    condutor BOOLEAN DEFAULT FALSE,
+                    possuidor BOOLEAN DEFAULT FALSE
+                );
+                """
+            )
 
-    # ---------- Tabela de pessoas ----------
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS pessoas (
-            id SERIAL PRIMARY KEY,
-            veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
-            nome TEXT,
-            cpf_cnpj VARCHAR(50) UNIQUE,
-            cnh TEXT,
-            validade_cnh DATE,
-            local_cnh TEXT,
-            suspeito TEXT,
-            relevante TEXT,
-            proprietario BOOLEAN DEFAULT FALSE,
-            condutor BOOLEAN DEFAULT FALSE
-        );
-    """)
+            # --- passagens ---
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS passagens (
+                    id SERIAL PRIMARY KEY,
+                    veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
+                    estado VARCHAR(100),
+                    municipio VARCHAR(200),
+                    rodovia VARCHAR(300),
+                    datahora TIMESTAMP,
+                    ilicito BOOLEAN DEFAULT FALSE
+                );
+                """
+            )
 
-    # ---------- Tabela de passagens ----------
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS passagens (
-            id SERIAL PRIMARY KEY,
-            veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
-            estado TEXT,
-            municipio TEXT,
-            rodovia TEXT,
-            data DATE,
-            hora TEXT
-        );
-    """)
-
-    conn.commit()
-    cur.close()
-    conn.close()
+        conn.commit()

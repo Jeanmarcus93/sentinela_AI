@@ -21,7 +21,7 @@ def extrair_texto_pdf(caminho_pdf: str) -> str:
 
 
 def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
-    """Extrai cabeçalho de veículo, proprietário e condutor."""
+    """Extrai cabeçalho de veículo, proprietário, condutor e possuidor."""
     dados = {
         "veiculo": {
             "placa": placa,
@@ -31,8 +31,9 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cor": None,
             "local_emplacamento": None,
             "transferencia_recente": None,
-            "suspeito": "Suspeito",
-            "relevante": "Fiscalização",
+            "comunicacao_venda": None,
+            "suspeito": True,
+            "relevante": True,
             "crime_prf": None,
             "abordagem_prf": None,
         },
@@ -42,10 +43,11 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cnh": None,
             "validade_cnh": None,
             "local_cnh": None,
-            "suspeito": "Suspeito",
-            "relevante": "Fiscalização",
+            "suspeito": True,
+            "relevante": True,
             "proprietario": True,
             "condutor": False,
+            "possuidor": False,
         },
         "condutor": {
             "nome": None,
@@ -53,10 +55,23 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "cnh": None,
             "validade_cnh": None,
             "local_cnh": None,
-            "suspeito": "Suspeito",
-            "relevante": "Fiscalização",
+            "suspeito": True,
+            "relevante": True,
             "proprietario": False,
             "condutor": True,
+            "possuidor": False,
+        },
+        "possuidor": {
+            "nome": None,
+            "cpf_cnpj": None,
+            "cnh": None,
+            "validade_cnh": None,
+            "local_cnh": None,
+            "suspeito": True,
+            "relevante": True,
+            "proprietario": False,
+            "condutor": False,
+            "possuidor": True,
         }
     }
 
@@ -72,12 +87,17 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
         dados["veiculo"]["cor"] = match.group(4).strip()
         dados["veiculo"]["local_emplacamento"] = match.group(5).strip()
 
+    if "Comunicação de Venda" in texto:
+        dados["veiculo"]["comunicacao_venda"] = "Comunicação de Venda"
+    if "Transferência" in texto:
+        dados["veiculo"]["transferencia_recente"] = "Transferência"
+
     if "BOP" in texto:
         dados["veiculo"]["crime_prf"] = "BOP"
     if "PDI" in texto:
         dados["veiculo"]["abordagem_prf"] = "PDI"
 
-    # --- Proprietário (prefixo ou não) ---
+    # --- Proprietário ---
     match = re.search(r"Propriet[aá]rio:\s*([A-ZÁÉÍÓÚÃÕÇ\s]+)\s*\(([\d\./-]+)\)", texto, re.IGNORECASE)
     if not match:
         match = re.search(r"\n([A-ZÁÉÍÓÚÃÕÇ\s\n]+)\s*\(([\d\./-]+)\)", texto)
@@ -92,13 +112,29 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
         dados["condutor"]["nome"] = match.group(1).strip()
         dados["condutor"]["cpf_cnpj"] = match.group(2).strip()
 
-    # --- CNH (proprietário ou condutor) ---
+    # --- Possuidor (captura em duas etapas) ---
+    match = re.search(r"Possuidor:\s*([A-ZÁÉÍÓÚÃÕÇ\s]+)\s*\(([\d\./-]+)\)", texto, re.IGNORECASE)
+    if match:
+        dados["possuidor"]["nome"] = match.group(1).strip()
+        dados["possuidor"]["cpf_cnpj"] = match.group(2).strip()
+
+    if dados["possuidor"]["nome"]:
+        match = re.search(r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(de|Local da CNH)\s*:?( [^\n\r]+)", texto, re.IGNORECASE)
+        if match:
+            dados["possuidor"]["cnh"] = match.group(1).strip()
+            try:
+                dados["possuidor"]["validade_cnh"] = datetime.strptime(match.group(2).strip(), "%d/%m/%Y").date()
+            except ValueError:
+                dados["possuidor"]["validade_cnh"] = None
+            dados["possuidor"]["local_cnh"] = match.group(4).strip()
+
+    # --- CNH genérica (proprietário ou condutor, se não for possuidor) ---
     match = re.search(
-        r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(de|Local da CNH)\s*:? ([^\n\r]+)",
+        r"CNH:\s*([A-Z]+).*?Validade:\s*([\d/]+).*?(de|Local da CNH)\s*:?( [^\n\r]+)",
         texto,
         re.IGNORECASE
     )
-    if match:
+    if match and not dados["possuidor"]["nome"]:
         cnh = match.group(1).strip()
         try:
             validade = datetime.strptime(match.group(2).strip(), "%d/%m/%Y").date()
@@ -134,18 +170,17 @@ def extrair_passagens(texto: str, placa: str) -> List[Dict[str, object]]:
                 if match:
                     data_str, hora_str = match.group(1), match.group(2)
                     break
-            if data_str:
+            if data_str and hora_str:
                 try:
-                    data_obj = datetime.strptime(data_str, "%d/%m/%Y").date()
+                    datahora = datetime.strptime(f"{data_str} {hora_str}", "%d/%m/%Y %H:%M:%S")
                 except ValueError:
-                    data_obj = None
+                    datahora = None
                 passagens.append({
                     "placa": placa,
                     "estado": estado,
                     "municipio": municipio,
                     "rodovia": rodovia,
-                    "data": data_obj,
-                    "hora": hora_str,
+                    "datahora": datahora,
                 })
     return passagens
 
@@ -161,9 +196,9 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
         # --- Inserir veículo ---
         cur.execute("""
             INSERT INTO veiculos (placa, marca_modelo, tipo, ano_modelo, cor,
-                                  local_emplacamento, transferencia_recente,
+                                  local_emplacamento, transferencia_recente, comunicacao_venda,
                                   suspeito, relevante, crime_prf, abordagem_prf)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (placa) DO UPDATE SET
                 marca_modelo = EXCLUDED.marca_modelo,
                 tipo = EXCLUDED.tipo,
@@ -171,6 +206,7 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
                 cor = EXCLUDED.cor,
                 local_emplacamento = EXCLUDED.local_emplacamento,
                 transferencia_recente = EXCLUDED.transferencia_recente,
+                comunicacao_venda = EXCLUDED.comunicacao_venda,
                 suspeito = EXCLUDED.suspeito,
                 relevante = EXCLUDED.relevante,
                 crime_prf = EXCLUDED.crime_prf,
@@ -179,8 +215,9 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
         """, (
             dados["veiculo"]["placa"], dados["veiculo"]["marca_modelo"], dados["veiculo"]["tipo"],
             dados["veiculo"]["ano_modelo"], dados["veiculo"]["cor"], dados["veiculo"]["local_emplacamento"],
-            dados["veiculo"]["transferencia_recente"], dados["veiculo"]["suspeito"],
-            dados["veiculo"]["relevante"], dados["veiculo"]["crime_prf"], dados["veiculo"]["abordagem_prf"]
+            dados["veiculo"]["transferencia_recente"], dados["veiculo"]["comunicacao_venda"],
+            dados["veiculo"]["suspeito"], dados["veiculo"]["relevante"],
+            dados["veiculo"]["crime_prf"], dados["veiculo"]["abordagem_prf"]
         ))
         veiculo_id = cur.fetchone()[0] if cur.rowcount > 0 else None
 
@@ -189,13 +226,13 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
             veiculo_id = cur.fetchone()[0]
 
         # --- Inserir pessoas (ligadas ao veículo) ---
-        for papel in ["proprietario", "condutor"]:
+        for papel in ["proprietario", "condutor", "possuidor"]:
             pessoa = dados[papel]
             if pessoa["nome"] and pessoa["cpf_cnpj"]:
                 cur.execute("""
                     INSERT INTO pessoas (veiculo_id, nome, cpf_cnpj, cnh, validade_cnh, local_cnh,
-                                         suspeito, relevante, proprietario, condutor)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                         suspeito, relevante, proprietario, condutor, possuidor)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (cpf_cnpj) DO UPDATE SET
                         nome = EXCLUDED.nome,
                         cnh = EXCLUDED.cnh,
@@ -205,22 +242,23 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
                         relevante = EXCLUDED.relevante,
                         proprietario = EXCLUDED.proprietario OR pessoas.proprietario,
                         condutor = EXCLUDED.condutor OR pessoas.condutor,
+                        possuidor = EXCLUDED.possuidor OR pessoas.possuidor,
                         veiculo_id = EXCLUDED.veiculo_id;
                 """, (
                     veiculo_id, pessoa["nome"], pessoa["cpf_cnpj"], pessoa["cnh"], pessoa["validade_cnh"],
                     pessoa["local_cnh"], pessoa["suspeito"], pessoa["relevante"],
-                    pessoa["proprietario"], pessoa["condutor"]
+                    pessoa["proprietario"], pessoa["condutor"], pessoa["possuidor"]
                 ))
 
         # --- Inserir passagens ---
         if passagens:
             registros = [
-                (veiculo_id, p["estado"], p["municipio"], p["rodovia"], p["data"], p["hora"])
+                (veiculo_id, p["estado"], p["municipio"], p["rodovia"], p["datahora"])
                 for p in passagens
             ]
             execute_values(cur, """
                 INSERT INTO passagens
-                    (veiculo_id, estado, municipio, rodovia, data, hora)
+                    (veiculo_id, estado, municipio, rodovia, datahora)
                 VALUES %s
             """, registros)
 
@@ -246,9 +284,9 @@ def processar_pdfs(pasta: str = "entrada_pdfs") -> None:
             dados = extrair_dados(texto, placa)
             passagens = extrair_passagens(texto, placa)
 
-            print(f"\n✅ Dados extraídos de {arquivo}:")
+            print(f"\n✅ Dados extraídos de {arquivo}:" )
             print(dados)
-            print(f"Passagens encontradas: {len(passagens)}")
+            print(f"Passagens encontradas: {len(passagens)}") 
 
             # 🔹 Agora insere no banco
             inserir_dados(dados, passagens)
