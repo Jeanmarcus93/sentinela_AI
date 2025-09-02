@@ -1,23 +1,35 @@
 # analise.py
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 import pandas as pd
 from sqlalchemy import text
 import json
+import re
 
 from database import get_engine, get_db_connection
 
 # Cria um Blueprint para as rotas de análise
 analise_bp = Blueprint('analise_bp', __name__)
 
+# --- Rota para renderizar a página de Análise ---
+@analise_bp.route('/analise')
+def analise():
+    return render_template('analise.html')
+
 @analise_bp.route('/api/analise/filtros')
 def api_analise_filtros():
-    """Fornece a lista de locais de entrega para preencher os filtros da UI."""
+    """Fornece a lista de locais de entrega e tipos de apreensão para preencher os filtros da UI."""
     try:
-        engine = get_engine()
-        with engine.connect() as conn:
-            query = text("SELECT DISTINCT relato FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato IS NOT NULL ORDER BY 1;")
-            df_locais = pd.read_sql(query, conn)
-            return jsonify(locais=df_locais['relato'].tolist())
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Locais de entrega
+                cur.execute("SELECT DISTINCT relato FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato IS NOT NULL ORDER BY 1;")
+                locais = [row[0] for row in cur.fetchall()]
+                
+                # Tipos de apreensões da nova tabela
+                cur.execute("SELECT unnest(enum_range(NULL::tipo_apreensao_enum))::text ORDER BY 1;")
+                apreensoes = [row[0] for row in cur.fetchall()]
+                
+        return jsonify(locais=locais, apreensoes=apreensoes)
     except Exception as e:
         print(f"ERRO em api_analise_filtros: {e}")
         return jsonify({"error": "Não foi possível carregar os filtros."}), 500
@@ -26,121 +38,130 @@ def api_analise_filtros():
 def api_analise_dados():
     """Endpoint principal que gera todos os dados de análise e inteligência."""
     locais_selecionados = request.args.getlist('locais')
+    apreensoes_selecionadas = request.args.getlist('apreensoes')
     placa = request.args.get('placa', None)
+    data_inicio = request.args.get('data_inicio', None)
+    data_fim = request.args.get('data_fim', None)
+    
     engine = get_engine()
     
     try:
+        # ---- Construção da Cláusula WHERE Dinâmica para veiculo_id ----
         params = {}
-        where_clauses = ["1=1"]
+        subqueries = []
 
         if locais_selecionados:
-            where_clauses.append("veiculo_id IN (SELECT DISTINCT veiculo_id FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato = ANY(:locais))")
+            subqueries.append("SELECT DISTINCT veiculo_id FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato = ANY(:locais)")
             params['locais'] = locais_selecionados
 
+        if apreensoes_selecionadas:
+            subqueries.append("SELECT DISTINCT o.veiculo_id FROM ocorrencias o JOIN apreensoes a ON o.id = a.ocorrencia_id WHERE a.tipo = ANY(:apreensoes)")
+            params['apreensoes'] = apreensoes_selecionadas
+        
+        veiculo_id_filter = ""
+        if subqueries:
+            veiculo_id_filter = f"veiculo_id IN ({ ' INTERSECT '.join(subqueries) })"
+        
+        # Constrói a cláusula WHERE principal
+        where_clauses = ["1=1"]
+        if veiculo_id_filter:
+            where_clauses.append(veiculo_id_filter)
+            
         if placa:
-            with get_db_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT id FROM veiculos WHERE placa = %s;", (placa.upper(),))
-                    veiculo_result = cur.fetchone()
-                    if veiculo_result:
-                        where_clauses.append("veiculo_id = :placa_veiculo_id")
-                        params['placa_veiculo_id'] = veiculo_result[0]
-                    else:
-                        where_clauses.append("1=0")
+            where_clauses.append("veiculo_id = (SELECT id FROM veiculos WHERE placa = :placa)")
+            params['placa'] = placa.upper()
+        
+        if data_inicio:
+            where_clauses.append("datahora >= :data_inicio")
+            params['data_inicio'] = data_inicio
+
+        if data_fim:
+            where_clauses.append("datahora <= :data_fim_inclusive")
+            params['data_fim_inclusive'] = f"{data_fim} 23:59:59"
 
         base_where_sql = " AND ".join(where_clauses)
 
         # --- Análise de Padrões de Passagens (Ida e Volta) ---
         def get_chart_data(table_name, extra_condition=""):
-            query = f"""
-                SELECT municipio, rodovia, EXTRACT(HOUR FROM datahora) AS hora, EXTRACT(DOW FROM datahora) AS dow 
-                FROM {table_name} WHERE {base_where_sql} {extra_condition}
-            """
-            df = pd.read_sql(text(query), engine, params=params)
-            if df.empty:
-                return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}}
+            query = text(f"SELECT municipio, rodovia, EXTRACT(HOUR FROM datahora) AS hora, EXTRACT(DOW FROM datahora) AS dow FROM {table_name} WHERE {base_where_sql} {extra_condition}")
+            df = pd.read_sql(query, engine, params=params)
+            if df.empty: return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}}
             
-            df_mun = df['municipio'].value_counts().head(10)
-            df_rodo = df['rodovia'].value_counts().head(10)
+            df_mun, df_rodo = df['municipio'].value_counts().head(10), df['rodovia'].value_counts().head(10)
             df_hora = df['hora'].astype(int).value_counts().sort_index()
             
             dias_map = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
             df['dia_semana'] = df['dow'].map(dias_map)
-            df_dow = df['dia_semana'].value_counts().reindex(dias_map.values()).dropna()
+            df_dow = df['dia_semana'].value_counts().reindex(list(dias_map.values())).dropna()
 
             return {
                 "municipio": {"labels": df_mun.index.tolist(), "data": df_mun.values.tolist()},
                 "rodovia": {"labels": df_rodo.index.tolist(), "data": df_rodo.values.tolist()},
-                "hora": {"labels": df_hora.index.tolist(), "data": df_hora.values.tolist()},
+                "hora": {"labels": [str(h) for h in df_hora.index], "data": df_hora.values.tolist()},
                 "dia_semana": {"labels": df_dow.index.tolist(), "data": df_dow.values.tolist()}
             }
 
         dados_ida = get_chart_data("passagens", "AND ilicito_ida IS TRUE")
-        dados_volta = get_chart_data("passagens", "AND ilicito_volta IS TRUE")
         
-        # --- Análise Logística (Tempo Médio de Permanência) ---
-        logistica_data = {}
-        query_lead_time = f"SELECT datahora, datahora_fim FROM ocorrencias WHERE tipo = 'Local de Entrega' AND datahora_fim IS NOT NULL AND {base_where_sql}"
-        df_lead_time = pd.read_sql(text(query_lead_time), engine, params=params)
+        # --- Análise Logística ---
+        query_lead_time = text(f"SELECT datahora, datahora_fim FROM ocorrencias WHERE tipo = 'Local de Entrega' AND datahora_fim IS NOT NULL AND {base_where_sql}")
+        df_lead_time = pd.read_sql(query_lead_time, engine, params=params)
         tempo_medio_horas = 0
         if not df_lead_time.empty:
             df_lead_time['permanencia_horas'] = (df_lead_time['datahora_fim'] - df_lead_time['datahora']).dt.total_seconds() / 3600
             tempo_medio_horas = df_lead_time['permanencia_horas'].mean()
-        logistica_data["tempo_medio"] = f"{tempo_medio_horas:.2f}"
+        logistica_data = {"tempo_medio": f"{tempo_medio_horas:.2f}"}
 
         # ================== SEÇÃO DE INTELIGÊNCIA ==================
-        passagens_where_sql = base_where_sql.replace('veiculo_id', 'p.veiculo_id')
-        ocorrencias_where_sql = base_where_sql.replace('veiculo_id', 'o.veiculo_id')
-        veiculos_join_where = base_where_sql.replace('veiculo_id', 'p.veiculo_id')
-
         # --- Inteligência de Rotas Comuns ---
+        # A cláusula WHERE já filtra os veiculos_id corretos
         query_rotas = text(f"""
-            WITH partida AS (
-                SELECT DISTINCT ON (p.veiculo_id) p.veiculo_id, p.municipio AS municipio_partida
-                FROM passagens p WHERE p.ilicito_ida IS TRUE AND {passagens_where_sql} ORDER BY p.veiculo_id, p.datahora ASC
+            WITH viagens_ilicitas AS (
+                SELECT DISTINCT ON (veiculo_id) veiculo_id, datahora, municipio AS municipio_partida
+                FROM passagens
+                WHERE {base_where_sql} AND ilicito_ida IS TRUE
+                ORDER BY veiculo_id, datahora ASC
             ),
-            chegada AS (
-                SELECT o.veiculo_id, o.relato AS municipio_chegada FROM ocorrencias o 
-                WHERE o.tipo = 'Local de Entrega' AND {ocorrencias_where_sql}
+            chegadas AS (
+                SELECT veiculo_id, relato AS municipio_chegada
+                FROM ocorrencias
+                WHERE tipo = 'Local de Entrega' AND {base_where_sql}
             )
-            SELECT p.municipio_partida || ' -> ' || c.municipio_chegada AS rota, COUNT(*) AS total
-            FROM partida p JOIN chegada c ON p.veiculo_id = c.veiculo_id GROUP BY rota ORDER BY total DESC LIMIT 10;
+            SELECT v.municipio_partida || ' -> ' || c.municipio_chegada AS rota, COUNT(*) AS total
+            FROM viagens_ilicitas v JOIN chegadas c ON v.veiculo_id = c.veiculo_id
+            GROUP BY rota ORDER BY total DESC LIMIT 10;
         """)
         df_rotas = pd.read_sql(query_rotas, engine, params=params)
-        rotas_chart = {"labels": df_rotas['rota'].tolist(), "data": df_rotas['total'].tolist()} if not df_rotas.empty else {}
+        rotas_chart = {"labels": df_rotas['rota'].tolist(), "data": df_rotas['total'].values.tolist()}
+        total_viagens = int(df_rotas['total'].sum())
         
-        # --- Inteligência de Perfil de Veículos ---
-        query_veiculos = text(f"""
-            SELECT v.marca_modelo, v.cor FROM veiculos v JOIN passagens p ON v.id = p.veiculo_id
-            WHERE p.ilicito_ida IS TRUE AND {veiculos_join_where}
+        # --- Inteligência de Perfil de Veículos e Apreensões ---
+        query_inteligencia = text(f"""
+            SELECT v.marca_modelo, v.cor, a.tipo as tipo_apreensao
+            FROM veiculos v
+            JOIN ocorrencias o ON v.id = o.veiculo_id
+            LEFT JOIN apreensoes a ON o.id = a.ocorrencia_id
+            WHERE o.veiculo_id IN (SELECT veiculo_id FROM passagens WHERE {base_where_sql} AND ilicito_ida IS TRUE)
         """)
-        df_veiculos = pd.read_sql(query_veiculos, engine, params=params).drop_duplicates()
-        modelos_chart, cores_chart = {}, {}
-        if not df_veiculos.empty:
-            df_modelos = df_veiculos['marca_modelo'].value_counts().head(10)
-            df_cores = df_veiculos['cor'].value_counts().head(10)
+        df_intel = pd.read_sql(query_inteligencia, engine, params=params)
+        modelos_chart, cores_chart, apreensoes_chart = {}, {}, {}
+        if not df_intel.empty:
+            df_modelos, df_cores = df_intel['marca_modelo'].value_counts().head(10), df_intel['cor'].value_counts().head(10)
             modelos_chart = {"labels": df_modelos.index.tolist(), "data": df_modelos.values.tolist()}
             cores_chart = {"labels": df_cores.index.tolist(), "data": df_cores.values.tolist()}
             
-        # --- Inteligência de Apreensões (BOP) ---
-        query_bop = text(f"SELECT apreensoes FROM ocorrencias WHERE tipo = 'BOP' AND apreensoes IS NOT NULL AND {base_where_sql};")
-        df_bop = pd.read_sql(query_bop, engine, params=params)
-        apreensoes_chart = {}
-        if not df_bop.empty and not df_bop['apreensoes'].dropna().empty:
-            try:
-                s_apreensoes = df_bop['apreensoes'].dropna().apply(json.loads).explode()
-                df_apreensoes = s_apreensoes.value_counts().head(10)
-                apreensoes_chart = {"labels": df_apreensoes.index.tolist(), "data": df_apreensoes.values.tolist()}
-            except Exception as e:
-                print(f"AVISO: Erro ao processar JSON de apreensões: {e}")
+            df_apreensoes = df_intel['tipo_apreensao'].dropna().value_counts().head(10)
+            apreensoes_chart = {"labels": df_apreensoes.index.tolist(), "data": df_apreensoes.values.tolist()}
 
         inteligencia_data = {
-            "rotas": rotas_chart, "veiculos_modelos": modelos_chart,
+            "total_viagens": total_viagens, "rotas": rotas_chart, "veiculos_modelos": modelos_chart,
             "veiculos_cores": cores_chart, "apreensoes": apreensoes_chart
         }
         
-        return jsonify(ida=dados_ida, volta=dados_volta, logistica=logistica_data, inteligencia=inteligencia_data)
+        return jsonify(ida=dados_ida, logistica=logistica_data, inteligencia=inteligencia_data)
 
     except Exception as e:
         print(f"ERRO em api_analise_dados: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Não foi possível gerar os dados de análise."}), 500

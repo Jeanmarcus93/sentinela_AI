@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, render_template, request
 from datetime import datetime, date
 import re
 import json
+from collections import defaultdict
+from psycopg.rows import dict_row
 
 from database import get_db_connection
 
@@ -19,12 +21,21 @@ def serialize_dates(obj):
     """Converte objetos de data/hora para o formato ISO para serialização JSON."""
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
+    # Adicionado para lidar com Decimals, se houver
+    from decimal import Decimal
+    if isinstance(obj, Decimal):
+        return str(obj)
     return obj
 
-# --- Rotas ---
+# --- Rotas para renderizar as páginas ---
 @main_bp.route('/')
-def index():
-    return render_template('index.html')
+@main_bp.route('/consulta')
+def consulta():
+    return render_template('consulta.html')
+
+@main_bp.route('/nova_ocorrencia')
+def nova_ocorrencia():
+    return render_template('nova_ocorrencia.html')
 
 @main_bp.route('/api/municipios')
 def api_get_municipios():
@@ -35,38 +46,60 @@ def api_get_municipios():
                 municipios = [f"{nome} - {uf}" for nome, uf in cur.fetchall()]
         return jsonify(municipios=municipios)
     except Exception as e:
-        print(f"ERRO em api_get_municipios: {e}")
         return jsonify({"error": "Não foi possível carregar a lista de municípios."}), 500
+
+def fetch_and_attach_details(cur, ocorrencias):
+    """Busca apreensões para uma lista de ocorrências e as anexa."""
+    if not ocorrencias:
+        return ocorrencias
+    
+    ocorrencia_ids = [o['id'] for o in ocorrencias]
+    # Busca todas as apreensões de uma vez para evitar múltiplas queries
+    cur.execute("SELECT ocorrencia_id, tipo, quantidade, unidade FROM apreensoes WHERE ocorrencia_id = ANY(%s);", (ocorrencia_ids,))
+    apreensoes_rows = cur.fetchall()
+    
+    # Agrupa as apreensões por ocorrencia_id
+    apreensoes_map = defaultdict(list)
+    for row in apreensoes_rows:
+        apreensoes_map[row['ocorrencia_id']].append({
+            "tipo": row['tipo'],
+            "quantidade": str(row['quantidade']), # Converte Decimal para string para JSON
+            "unidade": row['unidade']
+        })
+        
+    # Anexa a lista de apreensões a cada ocorrência
+    for o in ocorrencias:
+        o['apreensoes'] = apreensoes_map.get(o['id'], [])
+        
+    return ocorrencias
 
 @main_bp.route('/api/consulta_placa/<string:placa>')
 def api_consulta_placa(placa):
     try:
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            # CORREÇÃO: Utiliza o 'dict_row' para que o cursor retorne dicionários
+            with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute("SELECT id FROM veiculos WHERE placa = %s;", (placa.upper(),))
                 veiculo_result = cur.fetchone()
                 if not veiculo_result:
                     return jsonify({"error": "Matrícula não encontrada"}), 404
-                veiculo_id = veiculo_result[0]
+                veiculo_id = veiculo_result['id']
 
                 cur.execute("SELECT * FROM veiculos WHERE id = %s;", (veiculo_id,))
-                veiculo_cols = [desc[0] for desc in cur.description]
-                veiculo_data = cur.fetchone()
-                veiculo = dict(zip(veiculo_cols, veiculo_data)) if veiculo_data else {}
+                veiculo = cur.fetchone() or {}
 
                 cur.execute("SELECT * FROM pessoas WHERE veiculo_id = %s ORDER BY nome;", (veiculo_id,))
-                pessoas_cols = [desc[0] for desc in cur.description]
-                pessoas = [dict(zip(pessoas_cols, row)) for row in cur.fetchall()]
+                pessoas = cur.fetchall()
 
                 cur.execute("SELECT p.*, v.placa FROM passagens p JOIN veiculos v ON p.veiculo_id = v.id WHERE p.veiculo_id = %s ORDER BY p.datahora DESC;", (veiculo_id,))
-                passagens_cols = [desc[0] for desc in cur.description]
-                passagens = [dict(zip(passagens_cols, row)) for row in cur.fetchall()]
+                passagens = cur.fetchall()
 
                 cur.execute("SELECT o.*, v.placa FROM ocorrencias o JOIN veiculos v ON o.veiculo_id = v.id WHERE o.veiculo_id = %s ORDER BY o.datahora DESC;", (veiculo_id,))
-                ocorrencias_cols = [desc[0] for desc in cur.description]
-                ocorrencias = [dict(zip(ocorrencias_cols, row)) for row in cur.fetchall()]
+                ocorrencias = cur.fetchall()
+                ocorrencias = fetch_and_attach_details(cur, ocorrencias)
         
         # Serializa as datas para o formato JSON
+        veiculo = {k: serialize_dates(v) for k, v in veiculo.items()}
         pessoas = [{k: serialize_dates(v) for k, v in p.items()} for p in pessoas]
         passagens = [{k: serialize_dates(v) for k, v in p.items()} for p in passagens]
         ocorrencias = [{k: serialize_dates(v) for k, v in o.items()} for o in ocorrencias]
@@ -84,22 +117,29 @@ def api_consulta_cpf(cpf):
         return jsonify({"error": "Formato de CPF inválido."}), 400
     try:
         with get_db_connection() as conn:
-            with conn.cursor() as cur:
+            # CORREÇÃO: Utiliza o 'dict_row' para que o cursor retorne dicionários
+            with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute("SELECT id, nome, cpf_cnpj, veiculo_id FROM pessoas WHERE cpf_cnpj = %s;", (cpf_normalizado,))
-                pessoas = [dict(zip([c[0] for c in cur.description], row)) for row in cur.fetchall()]
+                pessoas = cur.fetchall()
                 if not pessoas:
                     return jsonify({"error": "CPF não encontrado."}), 404
 
-                veiculo_ids = list(set([p['veiculo_id'] for p in pessoas]))
-                cur.execute("SELECT * FROM veiculos WHERE id = ANY(%s);", (veiculo_ids,))
-                veiculos = [dict(zip([c[0] for c in cur.description], row)) for row in cur.fetchall()]
+                veiculo_ids = list(set([p['veiculo_id'] for p in pessoas if p['veiculo_id'] is not None]))
+                veiculos = []
+                if veiculo_ids:
+                    cur.execute("SELECT * FROM veiculos WHERE id = ANY(%s);", (veiculo_ids,))
+                    veiculos = cur.fetchall()
                 
-                cur.execute("SELECT o.*, v.placa FROM ocorrencias o JOIN veiculos v ON o.veiculo_id = v.id WHERE o.veiculo_id = ANY(%s) ORDER BY o.datahora DESC;", (veiculo_ids,))
-                ocorrencias = [dict(zip([c[0] for c in cur.description], row)) for row in cur.fetchall()]
+                ocorrencias, passagens = [], []
+                if veiculo_ids:
+                    cur.execute("SELECT o.*, v.placa FROM ocorrencias o JOIN veiculos v ON o.veiculo_id = v.id WHERE o.veiculo_id = ANY(%s) ORDER BY o.datahora DESC;", (veiculo_ids,))
+                    ocorrencias = cur.fetchall()
+                    ocorrencias = fetch_and_attach_details(cur, ocorrencias)
 
-                cur.execute("SELECT p.*, v.placa FROM passagens p JOIN veiculos v ON p.veiculo_id = v.id WHERE p.veiculo_id = ANY(%s) ORDER BY p.datahora DESC;", (veiculo_ids,))
-                passagens = [dict(zip([c[0] for c in cur.description], row)) for row in cur.fetchall()]
+                    cur.execute("SELECT p.*, v.placa FROM passagens p JOIN veiculos v ON p.veiculo_id = v.id WHERE p.veiculo_id = ANY(%s) ORDER BY p.datahora DESC;", (veiculo_ids,))
+                    passagens = cur.fetchall()
         
+        veiculos = [{k: serialize_dates(v) for k, v in veiculo.items()} for veiculo in veiculos]
         pessoas = [{k: serialize_dates(v) for k, v in p.items()} for p in pessoas]
         passagens = [{k: serialize_dates(v) for k, v in p.items()} for p in passagens]
         ocorrencias = [{k: serialize_dates(v) for k, v in o.items()} for o in ocorrencias]
@@ -115,25 +155,30 @@ def api_add_ocorrencia():
     try:
         veiculo_id = data.get('veiculo_id')
         tipo = data.get('tipo')
-        datahora_str = data.get('datahora')
-        
-        if not all([veiculo_id, tipo, datahora_str]):
+        if not all([veiculo_id, tipo, data.get('datahora')]):
             return jsonify({"error": "Campos obrigatórios faltando."}), 400
-        
-        if tipo == 'Local de Entrega' and not data.get('relato'):
-            return jsonify({"error": "A cidade de entrega é obrigatória."}), 400
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Insere a ocorrência principal e obtém o ID
                 cur.execute(
-                    """INSERT INTO ocorrencias (veiculo_id, tipo, datahora, datahora_fim, relato, ocupantes, apreensoes, presos, veiculos) 
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (
-                        veiculo_id, tipo, data.get('datahora'), data.get('datahora_fim'), data.get('relato'),
-                        data.get('ocupantes'), data.get('apreensoes'), data.get('presos'), data.get('veiculos')
-                    )
+                    """INSERT INTO ocorrencias (veiculo_id, tipo, datahora, datahora_fim, relato, ocupantes, presos, veiculos) 
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                    (veiculo_id, tipo, data.get('datahora'), data.get('datahora_fim'), data.get('relato'),
+                     data.get('ocupantes'), data.get('presos'), data.get('veiculos'))
                 )
+                ocorrencia_id = cur.fetchone()[0]
                 
+                # Se for BOP, insere os itens de apreensão na nova tabela
+                if tipo == 'BOP' and data.get('apreensoes'):
+                    apreensoes_list = json.loads(data.get('apreensoes'))
+                    for item in apreensoes_list:
+                        cur.execute(
+                            "INSERT INTO apreensoes (ocorrencia_id, tipo, quantidade, unidade) VALUES (%s, %s, %s, %s)",
+                            (ocorrencia_id, item['tipo'], item['quantidade'], item['unidade'])
+                        )
+                
+                # Lógica para inserir pessoas (presos/ocupantes)
                 pessoas_json = data.get('ocupantes') if tipo == 'Abordagem' else data.get('presos')
                 if pessoas_json:
                     for pessoa in json.loads(pessoas_json):
@@ -146,10 +191,40 @@ def api_add_ocorrencia():
         return jsonify({"success": True, "message": "Ocorrência adicionada com sucesso."}), 201
     except Exception as e:
         print(f"ERRO em api_add_ocorrencia: {e}")
-        return jsonify({"error": "Erro ao inserir ocorrência."}), 500
+        return jsonify({"error": f"Erro ao inserir ocorrência: {e}"}), 500
+
+@main_bp.route('/api/ocorrencia/<int:ocorrencia_id>', methods=['PUT'])
+def api_update_ocorrencia(ocorrencia_id):
+    data = request.get_json()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Atualiza os campos da tabela 'ocorrencias'
+                fields_to_update = {k: v for k, v in data.items() if k != 'apreensoes'}
+                if fields_to_update:
+                    update_str = ", ".join([f"{key} = %s" for key in fields_to_update.keys()])
+                    params = list(fields_to_update.values()) + [ocorrencia_id]
+                    cur.execute(f"UPDATE ocorrencias SET {update_str} WHERE id = %s", tuple(params))
+
+                # Atualiza os itens de apreensão (delete all e insert all)
+                if 'apreensoes' in data:
+                    cur.execute("DELETE FROM apreensoes WHERE ocorrencia_id = %s", (ocorrencia_id,))
+                    apreensoes_list = json.loads(data['apreensoes'])
+                    for item in apreensoes_list:
+                        cur.execute(
+                            "INSERT INTO apreensoes (ocorrencia_id, tipo, quantidade, unidade) VALUES (%s, %s, %s, %s)",
+                            (ocorrencia_id, item['tipo'], item['quantidade'], item['unidade'])
+                        )
+        return jsonify({"success": True, "message": "Ocorrência atualizada."})
+    except Exception as e:
+        print(f"ERRO ao atualizar ocorrência: {e}")
+        return jsonify({"error": "Erro ao atualizar ocorrência."}), 500
+
+# O resto das rotas (DELETE, PUT pessoa, PUT passagem) permanece o mesmo...
 
 @main_bp.route('/api/passagem/<int:passagem_id>', methods=['PUT'])
 def api_update_passagem(passagem_id):
+    # ... (código inalterado)
     data = request.get_json()
     field = data.get('field')
     if field not in ['ilicito_ida', 'ilicito_volta']:
@@ -165,6 +240,7 @@ def api_update_passagem(passagem_id):
 
 @main_bp.route('/api/ocorrencia/<int:ocorrencia_id>', methods=['DELETE'])
 def api_delete_ocorrencia(ocorrencia_id):
+    # ... (código inalterado)
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -176,6 +252,7 @@ def api_delete_ocorrencia(ocorrencia_id):
 
 @main_bp.route('/api/pessoa/<int:pessoa_id>', methods=['DELETE'])
 def api_delete_pessoa(pessoa_id):
+    # ... (código inalterado)
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -187,6 +264,7 @@ def api_delete_pessoa(pessoa_id):
     
 @main_bp.route('/api/pessoa/<int:pessoa_id>', methods=['PUT'])
 def api_update_pessoa(pessoa_id):
+    # ... (código inalterado)
     data = request.get_json()
     try:
         with get_db_connection() as conn:
@@ -197,22 +275,3 @@ def api_update_pessoa(pessoa_id):
     except Exception as e:
         print(f"ERRO ao atualizar pessoa: {e}")
         return jsonify({"error": "Erro ao atualizar pessoa."}), 500
-
-@main_bp.route('/api/ocorrencia/<int:ocorrencia_id>', methods=['PUT'])
-def api_update_ocorrencia(ocorrencia_id):
-    data = request.get_json()
-    fields_to_update = {k: v for k, v in data.items() if v is not None}
-    if not fields_to_update:
-        return jsonify({"error": "Nenhum campo para atualizar."}), 400
-
-    update_str = ", ".join([f"{key} = %s" for key in fields_to_update.keys()])
-    params = list(fields_to_update.values()) + [ocorrencia_id]
-    
-    try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"UPDATE ocorrencias SET {update_str} WHERE id = %s", tuple(params))
-        return jsonify({"success": True, "message": "Ocorrência atualizada."})
-    except Exception as e:
-        print(f"ERRO ao atualizar ocorrência: {e}")
-        return jsonify({"error": "Erro ao atualizar ocorrência."}), 500

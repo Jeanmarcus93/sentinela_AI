@@ -36,6 +36,19 @@ def criar_tabelas():
         );
         """,
         """
+        CREATE TABLE IF NOT EXISTS ocorrencias (
+            id SERIAL PRIMARY KEY,
+            veiculo_id INTEGER REFERENCES veiculos(id),
+            tipo VARCHAR(50) NOT NULL,
+            datahora TIMESTAMP NOT NULL,
+            datahora_fim TIMESTAMP,
+            relato TEXT,
+            ocupantes JSONB,
+            presos JSONB,
+            veiculos JSONB
+        );
+        """,
+        """
         CREATE TABLE IF NOT EXISTS passagens (
             id SERIAL PRIMARY KEY,
             veiculo_id INTEGER REFERENCES veiculos(id),
@@ -47,18 +60,28 @@ def criar_tabelas():
             ilicito_volta BOOLEAN DEFAULT FALSE
         );
         """,
+        # --- NOVOS TIPOS E TABELA PARA APREENSÕES ---
         """
-        CREATE TABLE IF NOT EXISTS ocorrencias (
+        DO $$ BEGIN
+            CREATE TYPE tipo_apreensao_enum AS ENUM ('Maconha', 'Skunk', 'Cocaina', 'Crack', 'Sintéticos', 'Arma');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+        """,
+        """
+        DO $$ BEGIN
+            CREATE TYPE unidade_apreensao_enum AS ENUM ('kg', 'g', 'un');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS apreensoes (
             id SERIAL PRIMARY KEY,
-            veiculo_id INTEGER REFERENCES veiculos(id),
-            tipo VARCHAR(50) NOT NULL,
-            datahora TIMESTAMP NOT NULL,
-            datahora_fim TIMESTAMP,
-            relato TEXT,
-            ocupantes JSONB,
-            apreensoes JSONB,
-            presos JSONB,
-            veiculos JSONB
+            ocorrencia_id INTEGER NOT NULL REFERENCES ocorrencias(id) ON DELETE CASCADE,
+            tipo tipo_apreensao_enum NOT NULL,
+            quantidade NUMERIC(10, 3) NOT NULL,
+            unidade unidade_apreensao_enum NOT NULL
         );
         """
     ]
@@ -73,3 +96,30 @@ def criar_tabelas():
     except Exception as e:
         print(f"Ocorreu um erro ao criar as tabelas: {e}")
         raise e
+
+def atualizar_esquema():
+    """Garante que colunas mais recentes existam na tabela. Usado para migrações."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Garante que a coluna JSONB antiga ainda exista para a migração
+                cur.execute("ALTER TABLE ocorrencias ADD COLUMN IF NOT EXISTS apreensoes JSONB;")
+        print("Esquema do banco de dados verificado/atualizado para migração.")
+    except Exception as e:
+        print(f"Ocorreu um erro ao atualizar o esquema: {e}")
+        pass
+
+def finalizar_migracao_apreensoes():
+    """Remove a coluna antiga 'apreensoes' da tabela 'ocorrencias' após a migração dos dados."""
+    print("Tentando remover coluna antiga de apreensões da tabela 'ocorrencias'...")
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Remove a coluna JSONB que não é mais necessária
+                cur.execute("ALTER TABLE ocorrencias DROP COLUMN IF EXISTS apreensoes;")
+                # Remove outras colunas que foram normalizadas ou não são mais usadas
+                cur.execute("ALTER TABLE ocorrencias DROP COLUMN IF EXISTS quantidade_total_kg;")
+                cur.execute("ALTER TABLE ocorrencias DROP COLUMN IF EXISTS tipos_apreensao;")
+        print("Coluna antiga 'apreensoes' removida com sucesso.")
+    except Exception as e:
+        print(f"Erro ao remover coluna antiga: {e}")

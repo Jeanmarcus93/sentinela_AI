@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinela IA</title>
+    <title>{% block title %}Sentinela IA{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
@@ -28,6 +28,14 @@
         .modal-input { width: 100%; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
         .date-input-empty { color: #a0aec0; }
         .ocupante-campo-group, .apreensao-campo-group, .preso-campo-group, .veiculo-campo-group { margin-bottom: 1rem; }
+        .kpi-box { background-color: #eef2ff; border-left: 5px solid #4f46e5; padding: 1.5rem; border-radius: 0.5rem; text-align: center; }
+        .kpi-value { font-size: 2.2rem; font-weight: bold; color: #3730a3; }
+        .kpi-label { font-size: 0.9rem; color: #64748b; margin-top: 0.25rem; }
+        .chart-container { background-color: #ffffff; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); min-height: 450px; display: flex; flex-direction: column; }
+        .chart-container h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
+        .nav-link { width: 100%; py: 2; px: 4; border-radius: 0.5rem; text-align: center; display: block; }
+        .nav-link.active { background-color: #3b82f6; }
+        .nav-link.inactive { background-color: #4b5563; hover:bg-gray-600; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen">
@@ -35,14 +43,16 @@
     <aside id="sidebar" class="bg-gray-800 text-white w-full md:w-64 p-6 flex flex-col items-center md:items-start">
         <h1 class="text-2xl font-bold mb-6 text-center md:text-left">Sentinela IA</h1>
         <div class="flex flex-row md:flex-col gap-4 w-full">
-            <button id="btn-consulta" class="w-full py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700">Consulta</button>
-            <button id="btn-nova-ocorrencia" class="w-full py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700">Nova Ocorrência</button>
+            <a id="nav-consulta" href="{{ url_for('main_bp.consulta') }}" class="nav-link inactive">Consulta</a>
+            <a id="nav-nova-ocorrencia" href="{{ url_for('main_bp.nova_ocorrencia') }}" class="nav-link inactive">Nova Ocorrência</a>
+            <a id="nav-analise" href="{{ url_for('analise_bp.analise') }}" class="nav-link inactive">Análise</a>
         </div>
     </aside>
 
-    <main id="main-content" class="flex-1 p-8 overflow-y-auto"></main>
+    <main id="main-content" class="flex-1 p-8 overflow-y-auto">
+        {% block content %}{% endblock %}
+    </main>
 
-    <!-- MODAL DE EDIÇÃO -->
     <div id="edit-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-xl w-full max-w-md overflow-y-auto max-h-screen">
             <h3 id="modal-title" class="text-2xl font-bold mb-4">Editar Registo</h3>
@@ -56,12 +66,11 @@
     </div>
 
     <script>
-        const mainContent = document.getElementById('main-content');
-        const btnConsulta = document.getElementById('btn-consulta');
-        const btnNovaOcorrencia = document.getElementById('btn-nova-ocorrencia');
-        let currentSearchData = {};
+        // --- FUNÇÕES GLOBAIS ---
+        function showLoader(container) {
+            container.innerHTML = '<div class="loader"></div>';
+        }
 
-        // --- LÓGICA DO MODAL DE EDIÇÃO ---
         function openEditModal(type, dataString) {
             const data = JSON.parse(decodeURIComponent(dataString));
             const modal = document.getElementById('edit-modal');
@@ -78,10 +87,8 @@
                     <div><label class="block">CPF</label><input type="text" name="cpf_cnpj" value="${data.cpf_cnpj || ''}" class="modal-input"></div>
                 `;
             } else if (type === 'ocorrencia') {
-                // Formata a data e hora sem conversão de fuso horário
                 const datahora_str = data.datahora ? data.datahora.split('T')[0] : '';
                 const hora_str = data.datahora ? data.datahora.split('T')[1].substring(0, 5) : '';
-
                 const datahora_fim_str = data.datahora_fim ? data.datahora_fim.split('T')[0] : '';
                 const hora_fim_str = data.datahora_fim ? data.datahora_fim.split('T')[1].substring(0, 5) : '';
 
@@ -126,7 +133,8 @@
                          <button type="button" onclick="addDynamicField('ocupantes')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Ocupante</button>
                      `;
                 } else if (data.tipo === 'BOP') {
-                    const apreensoes = data.apreensoes ? JSON.parse(data.apreensoes) : [];
+                    // ATUALIZAÇÃO: 'apreensoes' agora é um array nativo, não mais uma string JSON.
+                    const apreensoes = Array.isArray(data.apreensoes) ? data.apreensoes : [];
                     const presos = data.presos ? JSON.parse(data.presos) : [];
                     const veiculos = data.veiculos ? JSON.parse(data.veiculos) : [];
                     
@@ -136,7 +144,31 @@
                             <label class="block text-gray-700 font-semibold mb-2">Apreensões</label>
                             ${apreensoes.map(a => `
                                 <div class="apreensao-campo-group border-b pb-4 flex items-center gap-2">
-                                    <div class="flex-grow"><input type="text" name="apreensao" value="${a || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 flex-grow">
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Tipo</label>
+                                            <select name="apreensao-tipo" class="w-full px-2 py-1 border rounded-lg">
+                                                <option value="Maconha" ${a.tipo === 'Maconha' ? 'selected' : ''}>Maconha</option>
+                                                <option value="Skunk" ${a.tipo === 'Skunk' ? 'selected' : ''}>Skunk</option>
+                                                <option value="Cocaina" ${a.tipo === 'Cocaina' ? 'selected' : ''}>Cocaína</option>
+                                                <option value="Crack" ${a.tipo === 'Crack' ? 'selected' : ''}>Crack</option>
+                                                <option value="Sintéticos" ${a.tipo === 'Sintéticos' ? 'selected' : ''}>Sintéticos</option>
+                                                <option value="Arma" ${a.tipo === 'Arma' || a.tipo === 'Armas' ? 'selected' : ''}>Arma</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Quantidade</label>
+                                            <input type="text" inputmode="decimal" name="apreensao-qtd" value="${a.quantidade || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600">Unidade</label>
+                                            <select name="apreensao-unidade" class="w-full px-2 py-1 border rounded-lg">
+                                                <option value="kg" ${a.unidade && a.unidade.toLowerCase() === 'kg' ? 'selected' : ''}>Kg</option>
+                                                <option value="g" ${a.unidade && (a.unidade.toLowerCase() === 'g' || a.unidade.toLowerCase() === 'gramas') ? 'selected' : ''}>Gramas</option>
+                                                <option value="un" ${a.unidade && (a.unidade.toLowerCase() === 'un' || a.unidade.toLowerCase() === 'unidades') ? 'selected' : ''}>Unidades</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
                                 </div>
                             `).join('')}
@@ -198,7 +230,6 @@
                 const tipo = form.querySelector('input[name="tipo"]').value;
                 const relato = form.querySelector('textarea[name="relato"]').value;
 
-                // Captura a data e hora de início do formulário
                 const dataInicio = form.querySelector('input[name="datahora_date"]').value;
                 const horaInicio = form.querySelector('input[name="datahora_time"]').value;
                 let datahora_inicio = null;
@@ -214,7 +245,7 @@
                 }
 
                 payloadData = {
-                    datahora: datahora_inicio, // Adicionado para enviar a data de início
+                    datahora: datahora_inicio,
                     relato: relato,
                     datahora_fim: datahora_fim
                 };
@@ -226,15 +257,17 @@
                     })).filter(o => o.nome || o.cpf_cnpj);
                     payloadData.ocupantes = JSON.stringify(ocupantesList);
                 } else if (tipo === 'BOP') {
-                     const apreensoesList = Array.from(form.querySelectorAll('input[name="apreensao"]')).map(input => input.value.trim()).filter(val => val);
+                     const apreensoesList = Array.from(form.querySelectorAll('.apreensao-campo-group')).map(group => ({
+                         tipo: group.querySelector('select[name="apreensao-tipo"]').value,
+                         quantidade: group.querySelector('input[name="apreensao-qtd"]').value,
+                         unidade: group.querySelector('select[name="apreensao-unidade"]').value
+                     })).filter(p => p.tipo && p.quantidade);
                      payloadData.apreensoes = JSON.stringify(apreensoesList);
-
                      const presosList = Array.from(form.querySelectorAll('.preso-campo-group')).map(group => ({
                          nome: group.querySelector('input[name="preso-nome"]').value,
                          cpf_cnpj: group.querySelector('input[name="preso-cpf"]').value
                      })).filter(p => p.nome || p.cpf_cnpj);
                      payloadData.presos = JSON.stringify(presosList);
-                     
                      const veiculosList = Array.from(form.querySelectorAll('.veiculo-campo-group')).map(group => ({
                          placa: group.querySelector('input[name="veiculo-placa"]').value,
                          modelo: group.querySelector('input[name="veiculo-modelo"]').value
@@ -265,15 +298,14 @@
         function addDynamicField(containerId) {
             const container = document.getElementById(containerId + '-container');
             if (!container) return;
-
             const newGroup = document.createElement('div');
             newGroup.className = 'border-b pb-4 flex items-center gap-2';
 
             if (containerId === 'ocupantes' || containerId === 'presos') {
                 newGroup.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
-                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="${containerId}-cpf" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do ${containerId}"></div>
-                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="${containerId}-nome" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do ${containerId}"></div>
+                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="${containerId.slice(0, -1)}-cpf" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF"></div>
+                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="${containerId.slice(0, -1)}-nome" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome"></div>
                     </div>
                     <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
                 `;
@@ -289,15 +321,39 @@
             } else if (containerId === 'apreensoes') {
                 newGroup.className = 'apreensao-campo-group border-b pb-4 flex items-center gap-2';
                 newGroup.innerHTML = `
-                    <div class="flex-grow"><input type="text" name="apreensao" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 flex-grow">
+                        <div>
+                            <label class="block text-sm text-gray-600">Tipo</label>
+                            <select name="apreensao-tipo" class="w-full px-2 py-1 border rounded-lg">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Maconha">Maconha</option>
+                                <option value="Skunk">Skunk</option>
+                                <option value="Cocaina">Cocaína</option>
+                                <option value="Crack">Crack</option>
+                                <option value="Sintéticos">Sintéticos</option>
+                                <option value="Arma">Arma</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600">Quantidade</label>
+                            <input type="number" name="apreensao-qtd" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600">Unidade</label>
+                            <select name="apreensao-unidade" class="w-full px-2 py-1 border rounded-lg">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="kg">Kg</option>
+                                <option value="g">Gramas</option>
+                                <option value="un">Unidades</option>
+                            </select>
+                        </div>
+                    </div>
                     <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
                 `;
             }
-
             container.appendChild(newGroup);
         }
 
-        // --- LÓGICA DE EXCLUSÃO ---
         async function deleteItem(type, id) {
             if (!confirm(`Tem a certeza que deseja excluir este item? A ação não pode ser desfeita.`)) return;
             try {
@@ -309,75 +365,203 @@
                 alert(`Erro ao excluir: ${error.message}`);
             }
         }
+// --- LÓGICA PARA SHIFT-CLICK NAS CHECKBOXES ---
+        let lastCheckedIda = null;
+        let lastCheckedVolta = null;
 
-        // --- LÓGICA DE ATUALIZAÇÃO DAS PASSAGENS ---
-        async function updatePassagem(checkbox, passagemId, field) {
-            const value = checkbox.checked;
+        // Adiciona um listener de evento de clique ao corpo do documento.
+        // Isto é mais eficiente do que adicionar um listener a cada checkbox individualmente.
+        document.addEventListener('click', function(e) {
+            // Verifica se o elemento clicado é uma das nossas checkboxes
+            if (e.target.matches('.passagem-checkbox')) {
+                const checkbox = e.target;
+                const column = checkbox.dataset.column;
+
+                // Define qual variável de 'último clicado' usar com base na coluna
+                let lastChecked = (column === 'ida') ? lastCheckedIda : lastCheckedVolta;
+
+                // Se a tecla Shift estiver pressionada e já houver uma checkbox previamente clicada na mesma coluna
+                if (e.shiftKey && lastChecked) {
+                    const checkboxesInColumn = document.querySelectorAll(`.passagem-checkbox[data-column="${column}"]`);
+                    const allCheckboxesArray = Array.from(checkboxesInColumn);
+
+                    const start = allCheckboxesArray.indexOf(lastChecked);
+                    const end = allCheckboxesArray.indexOf(checkbox);
+
+                    // Determina o intervalo de checkboxes a serem marcadas/desmarcadas
+                    const range = allCheckboxesArray.slice(Math.min(start, end), Math.max(start, end) + 1);
+
+                    // Para cada checkbox no intervalo, define o seu estado para o mesmo da checkbox que foi acabada de clicar
+                    range.forEach(cb => {
+                        // Verifica se o estado precisa de ser alterado para evitar chamadas desnecessárias à API
+                        if (cb.checked !== checkbox.checked) {
+                            cb.checked = checkbox.checked;
+                            // Chama a função original 'updatePassagem' para guardar a alteração na base de dados
+                            updatePassagem(cb, cb.dataset.id, column);
+                        }
+                    });
+                }
+
+                // Atualiza a última checkbox clicada para a coluna correspondente
+                if (column === 'ida') {
+                    lastCheckedIda = checkbox;
+                } else {
+                    lastCheckedVolta = checkbox;
+                }
+            }
+        });
+
+        // ===============================================
+        // ===== FUNÇÕES DA PÁGINA DE ANÁLISE ============
+        // ===============================================
+        async function loadAnaliseFilters() {
             try {
-                const response = await fetch(`/api/passagem/${passagemId}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ field: `ilicito_${field}`, value: value })
+                const response = await fetch('/api/analise/filtros');
+                const data = await response.json();
+                const select = document.getElementById('analise-locais');
+                select.innerHTML = '';
+                data.locais.forEach(local => {
+                    const option = document.createElement('option');
+                    option.value = local;
+                    option.textContent = local;
+                    select.appendChild(option);
                 });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error);
-                
-                const feedbackEl = document.getElementById(`passagem-feedback-${passagemId}`);
-                feedbackEl.textContent = 'Guardado!';
-                setTimeout(() => { feedbackEl.textContent = ''; }, 2000);
-
+                 const apreensoesSelect = document.getElementById('analise-apreensoes');
+                apreensoesSelect.innerHTML = '';
+                 data.apreensoes.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    apreensoesSelect.appendChild(option);
+                });
             } catch (error) {
-                alert(`Erro ao guardar: ${error.message}`);
-                checkbox.checked = !value;
+                console.error('Erro ao carregar filtros de análise:', error);
             }
         }
 
-        // --- RENDERIZAÇÃO E BUSCA ---
-        function renderPage(page) {
-            mainContent.innerHTML = '';
-            btnConsulta.classList.replace(page === 'nova-ocorrencia' ? 'bg-blue-600' : 'bg-gray-600', page === 'nova-ocorrencia' ? 'bg-gray-600' : 'bg-blue-600');
-            btnNovaOcorrencia.classList.replace(page === 'consulta' ? 'bg-blue-600' : 'bg-gray-600', page === 'consulta' ? 'bg-gray-600' : 'bg-blue-600');
-            if (page === 'consulta') renderConsultaPage();
-            else if (page === 'nova-ocorrencia') renderNovaOcorrenciaPage();
-        }
-        
-        function showLoader(container) {
-            container.innerHTML = '<div class="loader"></div>';
-        }
+        async function handleAnaliseGeneration() {
+            const resultadosContainer = document.getElementById('analise-resultados');
+            const locais = Array.from(document.getElementById('analise-locais').selectedOptions).map(opt => opt.value);
+            const apreensoes = Array.from(document.getElementById('analise-apreensoes').selectedOptions).map(opt => opt.value);
+            const placa = document.getElementById('analise-placa').value.toUpperCase();
+            const dataInicio = document.getElementById('analise-data-inicio').value;
+            const dataFim = document.getElementById('analise-data-fim').value;
 
-        function renderConsultaPage() {
-            mainContent.innerHTML = `
-                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">🚔 Consulta</h1></div>
-                <div class="container-content">
-                    <div class="mb-6">
-                        <label for="search-type" class="block font-semibold mb-2">Tipo de Busca:</label>
-                        <select id="search-type" class="w-full p-2 border rounded-lg">
-                            <option value="placa">Placa</option>
-                            <option value="cpf">CPF</option>
-                        </select>
-                        <div class="mt-4">
-                            <label id="search-label" for="search-input" class="block font-semibold mb-2">Digite a Placa:</label>
-                            <input type="text" id="search-input" class="w-full px-4 py-2 border rounded-lg uppercase" />
-                        </div>
-                        <button id="search-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Consultar</button>
-                    </div>
-                    <div id="consulta-result" class="space-y-6"></div>
-                </div>`;
+            showLoader(resultadosContainer);
 
-            const searchTypeSelect = document.getElementById('search-type');
-            const searchInput = document.getElementById('search-input');
-            const searchLabel = document.getElementById('search-label');
-
-            searchTypeSelect.addEventListener('change', (e) => {
-                const isPlaca = e.target.value === 'placa';
-                searchLabel.textContent = isPlaca ? 'Digite a Placa:' : 'Digite o CPF:';
-                searchInput.placeholder = isPlaca ? 'Ex: ABC1234' : 'Ex: 123.456.789-00';
-                searchInput.className = isPlaca ? 'w-full px-4 py-2 border rounded-lg uppercase' : 'w-full px-4 py-2 border rounded-lg';
-            });
-
-            document.getElementById('search-btn').addEventListener('click', handleConsultaSearch);
+            const params = new URLSearchParams();
+            locais.forEach(local => params.append('locais', local));
+            apreensoes.forEach(item => params.append('apreensoes', item));
+            if (placa) params.append('placa', placa);
+            if (dataInicio) params.append('data_inicio', dataInicio);
+            if (dataFim) params.append('data_fim', dataFim);
+            
+            try {
+                const response = await fetch(`/api/analise?${params.toString()}`);
+                const data = await response.json();
+                if (response.ok) {
+                    displayAnaliseResults(data, resultadosContainer);
+                } else {
+                    resultadosContainer.innerHTML = `<p class="text-red-500">❌ Erro: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultadosContainer.innerHTML = `<p class="text-red-500">❌ Ocorreu um erro ao gerar a análise.</p>`;
+                console.error('Erro na requisição da análise:', error);
+            }
         }
 
+        function displayAnaliseResults(data, container) {
+            const kpisHtml = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="kpi-box"><div class="kpi-value">${data.inteligencia.total_viagens}</div><div class="kpi-label">Viagens Ilícitas Detectadas</div></div>
+                    <div class="kpi-box"><div class="kpi-value">${data.logistica.tempo_medio}h</div><div class="kpi-label">Tempo Médio de Permanência</div></div>
+                    <div class="kpi-box"><div class="kpi-value">${data.inteligencia.rotas.labels.length > 0 ? data.inteligencia.rotas.labels[0] : 'N/D'}</div><div class="kpi-label">Rota Mais Comum</div></div>
+                </div>
+            `;
+
+            const chartsHtml = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="chart-container"><h3 class="text-lg">Localizações Mais Comuns (Ida)</h3><div id="chart-ida-locais" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Rodovias Mais Comuns (Ida)</h3><div id="chart-ida-rodovias" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Distribuição por Hora (Ida)</h3><div id="chart-ida-hora" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Distribuição por Dia da Semana (Ida)</h3><div id="chart-ida-dia" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Rotas Mais Comuns</h3><div id="chart-rotas" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Modelos de Veículos (Viagens Ilícitas)</h3><div id="chart-veiculos" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Cores de Veículos (Viagens Ilícitas)</h3><div id="chart-cores" class="flex-grow"></div></div>
+                    <div class="chart-container"><h3 class="text-lg">Apreensões Mais Frequentes</h3><div id="chart-apreensoes" class="flex-grow"></div></div>
+                </div>
+            `;
+
+            container.innerHTML = kpisHtml + chartsHtml;
+
+            if (data.ida.municipio && data.ida.municipio.labels.length > 0) {
+                renderPlotlyChart('chart-ida-locais', data.ida.municipio, 'Locais (Ida)', 'bar', 'h');
+            }
+            if (data.ida.rodovia && data.ida.rodovia.labels.length > 0) {
+                renderPlotlyChart('chart-ida-rodovias', data.ida.rodovia, 'Rodovias (Ida)', 'bar', 'h');
+            }
+            if (data.ida.hora && data.ida.hora.labels.length > 0) {
+                renderPlotlyChart('chart-ida-hora', data.ida.hora, 'Hora (Ida)', 'bar');
+            }
+            if (data.ida.dia_semana && data.ida.dia_semana.labels.length > 0) {
+                renderPlotlyChart('chart-ida-dia', data.ida.dia_semana, 'Dia da Semana (Ida)', 'bar');
+            }
+            if (data.inteligencia.rotas && data.inteligencia.rotas.labels.length > 0) {
+                renderPlotlyChart('chart-rotas', data.inteligencia.rotas, 'Rotas Comuns', 'bar', 'h');
+            }
+            if (data.inteligencia.veiculos_modelos && data.inteligencia.veiculos_modelos.labels.length > 0) {
+                renderPlotlyChart('chart-veiculos', data.inteligencia.veiculos_modelos, 'Modelos de Veículos', 'pie');
+            }
+            if (data.inteligencia.veiculos_cores && data.inteligencia.veiculos_cores.labels.length > 0) {
+                renderPlotlyChart('chart-cores', data.inteligencia.veiculos_cores, 'Cores de Veículos', 'pie');
+            }
+            if (data.inteligencia.apreensoes && data.inteligencia.apreensoes.labels.length > 0) {
+                renderPlotlyChart('chart-apreensoes', data.inteligencia.apreensoes, 'Apreensões Mais Frequentes', 'bar', 'h');
+            }
+        }
+
+        function renderPlotlyChart(elementId, chartData, title, type, orientation = 'v') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            let data;
+            let layout;
+
+            if (type === 'pie') {
+                data = [{
+                    values: chartData.data,
+                    labels: chartData.labels,
+                    type: 'pie',
+                    hole: .4,
+                    textinfo: 'label+percent',
+                    hoverinfo: 'label+percent+value',
+                }];
+                layout = {
+                    margin: { t: 0, b: 0, l: 0, r: 0 },
+                    showlegend: true
+                };
+            } else {
+                data = [{
+                    x: orientation === 'h' ? chartData.data : chartData.labels,
+                    y: orientation === 'h' ? chartData.labels : chartData.data,
+                    type: 'bar',
+                    orientation: orientation,
+                    marker: { color: '#4f46e5' }
+                }];
+                layout = {
+                    margin: { t: 0 },
+                    xaxis: { title: orientation === 'h' ? 'Quantidade' : '' },
+                    yaxis: { title: orientation === 'v' ? 'Quantidade' : '' }
+                };
+            }
+
+            Plotly.newPlot(element, data, layout, { responsive: true, displayModeBar: false });
+        }
+
+
+        // ===============================================
+        // ===== FUNÇÕES DA PÁGINA DE CONSULTA ===========
+        // ===============================================
         async function handleConsultaSearch() {
             const searchType = document.getElementById('search-type').value;
             const searchValue = document.getElementById('search-input').value;
@@ -385,7 +569,6 @@
             if (!searchValue) return;
 
             showLoader(resultDiv);
-            currentSearchData = { type: searchType, value: searchValue };
             
             try {
                 const response = await fetch(`/api/consulta_${searchType}/${searchValue}`);
@@ -396,38 +579,25 @@
                 resultDiv.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
             }
         }
-        
+
         function displayConsultaResults(data, container) {
             const { veiculos, pessoas, passagens, ocorrencias } = data;
             const formatDate = (d) => {
                 if (!d) return 'N/D';
-                // A data vem do servidor como "2025-08-25T20:20:00"
-                // Vamos tratar como texto para evitar conversão de fuso horário.
                 const [datePart, timePart] = d.split('T');
                 const [year, month, day] = datePart.split('-');
-                const time = timePart.substring(0, 5); // Pega apenas HH:mm
-                
-                // Retorna no formato "DD/MM/AAAA HH:mm"
+                const time = timePart.substring(0, 5);
                 return `${day}/${month}/${year} ${time}`;
             };
             const formatCpfCnpj = (doc) => {
                 if (!doc) return 'N/D';
-                
-                // 1. Garante que o valor é uma string e remove todos os caracteres não numéricos
                 const cleaned = String(doc).replace(/\D/g, '');
-
-                // 2. Verifica o comprimento e aplica a máscara correta
                 if (cleaned.length === 11) {
-                    // Formato CPF: 123.456.789-00
                     return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
                 }
-
                 if (cleaned.length === 14) {
-                    // Formato CNPJ: 12.345.678/0001-90
                     return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
                 }
-
-                // 3. Se não for nem CPF nem CNPJ, retorna apenas os números
                 return cleaned; 
             };
             const escapeData = (d) => encodeURIComponent(JSON.stringify(d));
@@ -496,8 +666,23 @@
                                 <td class="p-2">${formatDate(p.datahora)}</td>
                                 <td class="p-2">${p.municipio}/${p.estado}</td>
                                 <td class="p-2">${p.rodovia || ''}</td>
-                                <td class="p-2 text-center"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'ida')" ${p.ilicito_ida ? 'checked' : ''}></td>
-                                <td class="p-2 text-center flex items-center justify-center gap-2"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'volta')" ${p.ilicito_volta ? 'checked' : ''}><span class="text-green-500 text-xs" id="passagem-feedback-${p.id}"></span></td>
+                                <td class="p-2 text-center">
+                                <input type="checkbox" 
+                                    class="passagem-checkbox" 
+                                    data-column="ida" 
+                                    data-id="${p.id}" 
+                                    onchange="updatePassagem(this, ${p.id}, 'ida')" 
+                                    ${p.ilicito_ida ? 'checked' : ''}>
+                            </td>
+                            <td class="p-2 text-center flex items-center justify-center gap-2">
+                                <input type="checkbox" 
+                                    class="passagem-checkbox" 
+                                    data-column="volta" 
+                                    data-id="${p.id}" 
+                                    onchange="updatePassagem(this, ${p.id}, 'volta')" 
+                                    ${p.ilicito_volta ? 'checked' : ''}>
+                                <span class="text-green-500 text-xs" id="passagem-feedback-${p.id}"></span>
+                            </td>
                             </tr>`).join('') || '<tr><td colspan="6" class="p-2">Nenhuma passagem encontrada.</td></tr>'}
                          </tbody>
                     </table>
@@ -505,49 +690,55 @@
             `;
         }
 
-        async function renderNovaOcorrenciaPage() {
-            mainContent.innerHTML = `
-                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">✍️ Nova Ocorrência</h1></div>
-                <div class="container-content space-y-6">
-                    <div class="mb-6">
-                        <label for="nova-ocorrencia-search-input" class="block font-semibold mb-2">Digite a Placa do Veículo:</label>
-                        <input type="text" id="nova-ocorrencia-search-input" class="w-full px-4 py-2 border rounded-lg uppercase" placeholder="Ex: ABC1234" />
-                        <button id="nova-ocorrencia-search-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Buscar Veículo</button>
-                    </div>
-                    <div id="nova-ocorrencia-form-container"></div>
-                </div>
-            `;
-            
-            const searchInput = document.getElementById('nova-ocorrencia-search-input');
-            const searchBtn = document.getElementById('nova-ocorrencia-search-btn');
-            const formContainer = document.getElementById('nova-ocorrencia-form-container');
+        async function updatePassagem(checkbox, passagemId, field) {
+            const value = checkbox.checked;
+            try {
+                const response = await fetch(`/api/passagem/${passagemId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ field: `ilicito_${field}`, value: value })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                
+                const feedbackEl = document.getElementById(`passagem-feedback-${passagemId}`);
+                feedbackEl.textContent = 'Guardado!';
+                setTimeout(() => { feedbackEl.textContent = ''; }, 2000);
 
-            searchBtn.addEventListener('click', async () => {
-                const placa = searchInput.value;
-                if (!placa) {
-                    formContainer.innerHTML = `<p class="text-red-500">Por favor, digite a placa do veículo.</p>`;
-                    return;
+            } catch (error) {
+                alert(`Erro ao guardar: ${error.message}`);
+                checkbox.checked = !value;
+            }
+        }
+
+        // ===============================================
+        // ===== FUNÇÕES DA PÁGINA DE NOVA OCORRÊNCIA ====
+        // ===============================================
+        async function handleNovaOcorrenciaSearch(placa) {
+            const formContainer = document.getElementById('nova-ocorrencia-form-container');
+            if (!placa) {
+                formContainer.innerHTML = `<p class="text-red-500">Por favor, digite a placa do veículo.</p>`;
+                return;
+            }
+            
+            showLoader(formContainer);
+
+            try {
+                const response = await fetch(`/api/consulta_placa/${placa}`);
+                const data = await response.json();
+                if (response.status === 404) {
+                    throw new Error("Matrícula não encontrada.");
+                }
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro ao buscar veículo.');
                 }
                 
-                showLoader(formContainer);
+                const veiculo = data.veiculos[0];
+                setupOcorrenciaForm(veiculo.id);
 
-                try {
-                    const response = await fetch(`/api/consulta_placa/${placa}`);
-                    const data = await response.json();
-                    if (response.status === 404) {
-                        throw new Error("Matrícula não encontrada.");
-                    }
-                    if (!response.ok) {
-                        throw new Error(data.error || 'Erro ao buscar veículo.');
-                    }
-                    
-                    const veiculo = data.veiculos[0];
-                    setupOcorrenciaForm(veiculo.id);
-
-                } catch (error) {
-                    formContainer.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
-                }
-            });
+            } catch (error) {
+                formContainer.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
+            }
         }
 
         async function setupOcorrenciaForm(veiculoId) {
@@ -642,7 +833,6 @@
                 ocupantesGroup.classList.toggle('hidden', !isAbordagem);
                 bopGroup.classList.toggle('hidden', !isBOP);
                 
-                // Clear dynamic fields when toggling
                 ocupantesContainer.innerHTML = '';
                 apreensoesContainer.innerHTML = '';
                 presosContainer.innerHTML = '';
@@ -679,7 +869,33 @@
                 const newApreensaoGroup = document.createElement('div');
                 newApreensaoGroup.className = 'apreensao-campo-group border-b pb-4 flex items-center gap-2';
                 newApreensaoGroup.innerHTML = `
-                    <div class="flex-grow"><input type="text" name="apreensao" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 flex-grow">
+                        <div>
+                            <label class="block text-sm text-gray-600">Tipo</label>
+                            <select name="apreensao-tipo" class="w-full px-2 py-1 border rounded-lg">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Maconha">Maconha</option>
+                                <option value="Skunk">Skunk</option>
+                                <option value="Cocaina">Cocaína</option>
+                                <option value="Crack">Crack</option>
+                                <option value="Sintéticos">Sintéticos</option>
+                                <option value="Arma">Arma</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600">Quantidade</label>
+                            <input type="text" inputmode="decimal" name="apreensao-qtd" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600">Unidade</label>
+                            <select name="apreensao-unidade" class="w-full px-2 py-1 border rounded-lg">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="kg">Kg</option>
+                                <option value="g">Gramas</option>
+                                <option value="un">Unidades</option>
+                            </select>
+                        </div>
+                    </div>
                     <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
                 `;
                 apreensoesContainer.appendChild(newApreensaoGroup);
@@ -763,7 +979,11 @@
                      ocupantes = JSON.stringify(ocupantesList);
                      relatoFinal = document.getElementById('relato').value;
                 } else if (tipoSelecionado === 'BOP') {
-                    const apreensoesList = Array.from(document.querySelectorAll('input[name="apreensao"]')).map(input => input.value.trim()).filter(val => val);
+                    const apreensoesList = Array.from(document.querySelectorAll('.apreensao-campo-group')).map(group => ({
+                        tipo: group.querySelector('select[name="apreensao-tipo"]').value,
+                        quantidade: group.querySelector('input[name="apreensao-qtd"]').value,
+                        unidade: group.querySelector('select[name="apreensao-unidade"]').value
+                    })).filter(a => a.tipo && a.quantidade);
                     apreensoes = JSON.stringify(apreensoesList);
                     
                      const nomesPresos = document.querySelectorAll('input[name="preso-nome"]');
@@ -821,7 +1041,10 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || 'Erro.');
                     feedback.innerHTML = `<p class="text-green-500">${result.message}</p>`;
-                    form.reset();
+                    const formToReset = document.getElementById('ocorrencia-form');
+                    if(formToReset) {
+                        formToReset.reset();
+                    }
                     document.getElementById('ocupantes-container').innerHTML = '';
                     document.getElementById('veiculos-envolvidos-container').innerHTML = '';
                     document.getElementById('apreensoes-container').innerHTML = '';
@@ -832,12 +1055,55 @@
             });
         }
 
-        // --- INICIALIZAÇÃO ---
+        // --- LÓGICA DE INICIALIZAÇÃO E NAVEGAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
-            btnConsulta.addEventListener('click', () => renderPage('consulta'));
-            btnNovaOcorrencia.addEventListener('click', () => renderPage('nova-ocorrencia'));
-            document.getElementById('modal-save-btn').addEventListener('click', handleModalSave);
-            renderPage('consulta');
+            const currentPath = window.location.pathname;
+            if (currentPath === '/' || currentPath.includes('consulta')) {
+                document.getElementById('nav-consulta').classList.replace('inactive', 'active');
+            } else if (currentPath.includes('nova_ocorrencia')) {
+                document.getElementById('nav-nova-ocorrencia').classList.replace('inactive', 'active');
+            } else if (currentPath.includes('analise')) {
+                document.getElementById('nav-analise').classList.replace('inactive', 'active');
+            }
+
+            if (currentPath.includes('analise')) {
+                loadAnaliseFilters();
+                const analiseBtn = document.getElementById('analise-btn-gerar');
+                if(analiseBtn) {
+                    analiseBtn.addEventListener('click', handleAnaliseGeneration);
+                }
+            } else if (currentPath === '/' || currentPath.includes('consulta')) {
+                const searchBtn = document.getElementById('search-btn');
+                if(searchBtn) {
+                    searchBtn.addEventListener('click', handleConsultaSearch);
+                }
+                const searchTypeSelect = document.getElementById('search-type');
+                if(searchTypeSelect) {
+                    searchTypeSelect.addEventListener('change', (e) => {
+                        const isPlaca = e.target.value === 'placa';
+                        document.getElementById('search-label').textContent = isPlaca ? 'Digite a Placa:' : 'Digite o CPF:';
+                        const searchInput = document.getElementById('search-input');
+                        if (searchInput) {
+                            searchInput.className = isPlaca ? 'w-full px-4 py-2 border rounded-lg uppercase' : 'w-full px-4 py-2 border rounded-lg';
+                        }
+                    });
+                }
+            } else if (currentPath.includes('nova_ocorrencia')) {
+                 const novaOcorrenciaSearchBtn = document.getElementById('nova-ocorrencia-search-btn');
+                 if(novaOcorrenciaSearchBtn) {
+                    novaOcorrenciaSearchBtn.addEventListener('click', () => {
+                        const placaInput = document.getElementById('nova-ocorrencia-search-input');
+                        if(placaInput) {
+                            handleNovaOcorrenciaSearch(placaInput.value);
+                        }
+                    });
+                 }
+            }
+
+            const modalSaveBtn = document.getElementById('modal-save-btn');
+            if(modalSaveBtn) {
+                modalSaveBtn.addEventListener('click', handleModalSave);
+            }
         });
     </script>
 </body>
