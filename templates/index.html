@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinela IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .page-header { border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .container-content { background-color: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .data-card { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; }
+        .data-card h3 { border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 2rem auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .action-btn { 
+            padding: 4px 8px; 
+            font-size: 0.8rem; 
+            border-radius: 4px; 
+            border: none; 
+            cursor: pointer; 
+            transition: background-color 0.2s;
+            width: 80px;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .modal-input { width: 100%; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
+        .date-input-empty { color: #a0aec0; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen">
+
+    <aside id="sidebar" class="bg-gray-800 text-white w-full md:w-64 p-6 flex flex-col items-center md:items-start">
+        <h1 class="text-2xl font-bold mb-6 text-center md:text-left">Sentinela IA</h1>
+        <div class="flex flex-row md:flex-col gap-4 w-full">
+            <button id="btn-consulta" class="w-full py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700">Consulta</button>
+            <button id="btn-analise" class="w-full py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700">Análise</button>
+        </div>
+    </aside>
+
+    <main id="main-content" class="flex-1 p-8 overflow-y-auto"></main>
+
+    <!-- MODAL DE EDIÇÃO -->
+    <div id="edit-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4">Editar Registo</h3>
+            <form id="modal-form" class="space-y-4"></form>
+            <div id="modal-feedback" class="mt-4 text-sm"></div>
+            <div class="mt-6 flex justify-end gap-4">
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded-lg">Cancelar</button>
+                <button id="modal-save-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const mainContent = document.getElementById('main-content');
+        const btnConsulta = document.getElementById('btn-consulta');
+        const btnAnalise = document.getElementById('btn-analise');
+        let currentVeiculoId = null;
+        let currentEditData = {};
+
+        // --- LÓGICA DO MODAL DE EDIÇÃO ---
+        function openEditModal(type, dataString) {
+            const data = JSON.parse(decodeURIComponent(dataString));
+            currentEditData = { type, data };
+            
+            const modal = document.getElementById('edit-modal');
+            const form = document.getElementById('modal-form');
+            const title = document.getElementById('modal-title');
+            document.getElementById('modal-feedback').innerHTML = '';
+
+            title.textContent = `Editar ${type === 'pessoa' ? 'Pessoa' : 'Ocorrência'}`;
+            
+            if (type === 'pessoa') {
+                form.innerHTML = `
+                    <input type="hidden" name="id" value="${data.id}">
+                    <div><label class="block">Nome</label><input type="text" name="nome" value="${data.nome || ''}" class="modal-input"></div>
+                    <div><label class="block">CPF/CNPJ</label><input type="text" name="cpf_cnpj" value="${data.cpf_cnpj || ''}" class="modal-input"></div>
+                `;
+            } else if (type === 'ocorrencia') {
+                 form.innerHTML = `
+                    <input type="hidden" name="id" value="${data.id}">
+                    <div><label class="block">Tipo</label><input type="text" name="tipo" value="${data.tipo || ''}" class="modal-input" readonly></div>
+                    <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
+                `;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        async function handleModalSave() {
+            alert('A funcionalidade de guardar a edição ainda não foi implementada no backend.');
+            closeModal();
+        }
+
+        // --- LÓGICA DE EXCLUSÃO ---
+        async function deleteItem(type, id) {
+            if (!confirm(`Tem a certeza que deseja excluir este item? A ação não pode ser desfeita.`)) return;
+            try {
+                const response = await fetch(`/api/${type}/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                handleConsultaSearch();
+            } catch (error) {
+                alert(`Erro ao excluir: ${error.message}`);
+            }
+        }
+
+        // --- LÓGICA DE ATUALIZAÇÃO DAS PASSAGENS ---
+        async function updatePassagem(checkbox, passagemId, field) {
+            const value = checkbox.checked;
+            try {
+                const response = await fetch(`/api/passagem/${passagemId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ field: `ilicito_${field}`, value: value })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                
+                const feedbackEl = document.getElementById(`passagem-feedback-${passagemId}`);
+                feedbackEl.textContent = 'Guardado!';
+                setTimeout(() => { feedbackEl.textContent = ''; }, 2000);
+
+            } catch (error) {
+                alert(`Erro ao guardar: ${error.message}`);
+                checkbox.checked = !value;
+            }
+        }
+
+        // --- RENDERIZAÇÃO E BUSCA ---
+        function renderPage(page) {
+            mainContent.innerHTML = '';
+            btnConsulta.classList.replace(page === 'analise' ? 'bg-blue-600' : 'bg-gray-600', page === 'analise' ? 'bg-gray-600' : 'bg-blue-600');
+            btnAnalise.classList.replace(page === 'consulta' ? 'bg-blue-600' : 'bg-gray-600', page === 'consulta' ? 'bg-gray-600' : 'bg-blue-600');
+            if (page === 'consulta') renderConsultaPage();
+            else if (page === 'analise') renderAnalisePage();
+        }
+        
+        function showLoader(container) {
+            container.innerHTML = '<div class="loader"></div>';
+        }
+
+        function renderConsultaPage() {
+            mainContent.innerHTML = `
+                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">🚔 Consulta de Veículos</h1></div>
+                <div class="container-content">
+                    <div class="mb-6">
+                        <label for="placa-input" class="block font-semibold mb-2">Digite a matrícula:</label>
+                        <input type="text" id="placa-input" placeholder="Ex: ABC1234" class="w-full px-4 py-2 border rounded-lg uppercase" />
+                        <button id="search-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Consultar</button>
+                    </div>
+                    <div id="consulta-result" class="space-y-6"></div>
+                </div>`;
+            document.getElementById('search-btn').addEventListener('click', handleConsultaSearch);
+        }
+
+        async function handleConsultaSearch() {
+            const placaInput = document.getElementById('placa-input');
+            const placa = placaInput ? placaInput.value : (document.getElementById('placa-display') ? document.getElementById('placa-display').textContent : null);
+            const resultDiv = document.getElementById('consulta-result');
+            if (!placa) return;
+
+            showLoader(resultDiv);
+            try {
+                const response = await fetch(`/api/consulta/${placa}`);
+                if (!response.ok) throw new Error((await response.json()).error || 'Matrícula não encontrada.');
+                const data = await response.json();
+                currentVeiculoId = data.veiculo.id;
+                displayConsultaResults(data, resultDiv);
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
+            }
+        }
+        
+        function displayConsultaResults(data, container) {
+            const { veiculo, pessoas, passagens, ocorrencias } = data;
+            const formatDate = (d) => d ? new Date(d).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}) : 'N/D';
+            const formatBool = (v) => v ? 'Sim' : 'Não';
+            const formatCpf = (c) => (c || '').replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            const escapeData = (d) => encodeURIComponent(JSON.stringify(d));
+
+            container.innerHTML = `
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">🚘 Dados do Veículo</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <p><strong>Matrícula:</strong> <span id="placa-display">${veiculo.placa || 'N/D'}</span></p>
+                        <p><strong>Marca/Modelo:</strong> ${veiculo.marca_modelo || 'N/D'}</p>
+                        <p><strong>Tipo:</strong> ${veiculo.tipo || 'N/D'}</p>
+                        <p><strong>Ano/Modelo:</strong> ${veiculo.ano_modelo || 'N/D'}</p>
+                        <p><strong>Cor:</strong> ${veiculo.cor || 'N/D'}</p>
+                        <p><strong>Local de Matrícula:</strong> ${veiculo.local_emplacamento || 'N/D'}</p>
+                        <p><strong>Transf. Recente:</strong> ${formatBool(veiculo.transferencia_recente)}</p>
+                        <p><strong>Comun. Venda:</strong> ${formatBool(veiculo.comunicacao_venda)}</p>
+                        <p><strong>Crime PRF:</strong> ${formatBool(veiculo.crime_prf)}</p>
+                        <p><strong>Abordagem PRF:</strong> ${formatBool(veiculo.abordagem_prf)}</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">👥 Pessoas Relacionadas</h3>
+                    <table class="min-w-full text-sm text-left">
+                        <thead class="bg-gray-100"><tr><th class="p-2">Nome</th><th class="p-2">CPF</th><th class="p-2">Ações</th></tr></thead>
+                        <tbody>${pessoas.map(p => `
+                            <tr class="border-b">
+                                <td class="p-2">${p.nome}</td><td class="p-2">${formatCpf(p.cpf_cnpj)}</td>
+                                <td class="p-2">
+                                    <button onclick="openEditModal('pessoa', '${escapeData(p)}')" class="action-btn bg-yellow-400 hover:bg-yellow-500">Editar</button>
+                                    <button onclick="deleteItem('pessoa', ${p.id})" class="action-btn bg-red-500 hover:bg-red-600 text-white">Excluir</button>
+                                </td>
+                            </tr>`).join('') || '<tr><td colspan="3" class="p-2">Nenhuma pessoa encontrada.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">🚨 Ocorrências</h3>
+                    <table class="min-w-full text-sm text-left">
+                         <thead class="bg-gray-100"><tr><th class="p-2">Tipo</th><th class="p-2">Data/Hora</th><th class="p-2">Relato</th><th class="p-2">Ações</th></tr></thead>
+                         <tbody>${ocorrencias.map(o => `
+                            <tr class="border-b">
+                                <td class="p-2">${o.tipo.replace('Local de Entrega', 'Local de Entrega da Droga')}</td>
+                                <td class="p-2">${formatDate(o.datahora)}</td>
+                                <td class="p-2">${o.relato || ''}</td>
+                                <td class="p-2">
+                                    <button onclick="openEditModal('ocorrencia', '${escapeData(o)}')" class="action-btn bg-yellow-400 hover:bg-yellow-500">Editar</button>
+                                    <button onclick="deleteItem('ocorrencia', ${o.id})" class="action-btn bg-red-500 hover:bg-red-600 text-white">Excluir</button>
+                                </td>
+                            </tr>`).join('') || '<tr><td colspan="4" class="p-2">Nenhuma ocorrência encontrada.</td></tr>'}
+                         </tbody>
+                    </table>
+                </div>
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">📍 Passagens</h3>
+                    <table class="min-w-full text-sm text-left">
+                         <thead class="bg-gray-100"><tr><th class="p-2">Data/Hora</th><th class="p-2">Local</th><th class="p-2">Autoestrada</th><th class="p-2">Ilícito (Ida)</th><th class="p-2">Ilícito (Volta)</th></tr></thead>
+                         <tbody>${passagens.map(p => `
+                            <tr class="border-b">
+                                <td class="p-2">${formatDate(p.datahora)}</td>
+                                <td class="p-2">${p.municipio}/${p.estado}</td>
+                                <td class="p-2">${p.rodovia || ''}</td>
+                                <td class="p-2 text-center"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'ida')" ${p.ilicito_ida ? 'checked' : ''}></td>
+                                <td class="p-2 text-center"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'volta')" ${p.ilicito_volta ? 'checked' : ''}><span class="text-green-500 text-xs ml-2" id="passagem-feedback-${p.id}"></span></td>
+                            </tr>`).join('') || '<tr><td colspan="5" class="p-2">Nenhuma passagem encontrada.</td></tr>'}
+                         </tbody>
+                    </table>
+                </div>
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">✍️ Inserir Nova Ocorrência</h3>
+                    <form id="ocorrencia-form" class="mt-4 space-y-4"></form>
+                </div>
+            `;
+            setupOcorrenciaForm();
+        }
+
+        async function setupOcorrenciaForm() {
+            const formContainer = document.getElementById('ocorrencia-form');
+            formContainer.innerHTML = `
+                <div>
+                    <label for="tipo-ocorrencia" class="block text-gray-700">Tipo</label>
+                    <select id="tipo-ocorrencia" class="mt-1 block w-full rounded-lg border-gray-300">
+                        <option value="Abordagem">Abordagem</option>
+                        <option value="BOP">BOP</option>
+                        <option value="Local de Entrega">Local de Entrega da Droga</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="data-inicio" class="block text-gray-700">Data Inicial</label><input type="date" id="data-inicio" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+                    <div><label for="hora-inicio" class="block text-gray-700">Hora Inicial</label><input type="time" id="hora-inicio" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+                </div>
+                <div id="data-fim-group" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <div><label for="data-fim" class="block text-gray-700">Data Final</label><input type="date" id="data-fim" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+                    <div><label for="hora-fim" class="block text-gray-700">Hora Final</label><input type="time" id="hora-fim" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+                </div>
+                
+                <div id="cidade-entrega-group" class="hidden">
+                     <label for="cidade-entrega-select" class="block text-gray-700">Cidade da Entrega</label>
+                     <select id="cidade-entrega-select" class="mt-1 block w-full rounded-lg border-gray-300"></select>
+                </div>
+
+                <div id="relato-group"><label for="relato" class="block text-gray-700">Relato</label><textarea id="relato" rows="3" class="mt-1 block w-full rounded-lg border-gray-300"></textarea></div>
+                <div id="ocupantes-group"><label for="ocupantes" class="block text-gray-700">Ocupantes (CPFs)</label><input type="text" id="ocupantes" class="mt-1 block w-full rounded-lg border-gray-300" /></div>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Guardar Ocorrência</button>
+                <div id="form-feedback" class="mt-4"></div>
+            `;
+            
+            const selectTipo = document.getElementById('tipo-ocorrencia');
+            const dataFimGroup = document.getElementById('data-fim-group');
+            const ocupantesGroup = document.getElementById('ocupantes-group');
+            const relatoGroup = document.getElementById('relato-group');
+            const cidadeEntregaGroup = document.getElementById('cidade-entrega-group');
+
+            const toggleFields = () => {
+                const tipo = selectTipo.value;
+                const isEntrega = tipo === 'Local de Entrega';
+                dataFimGroup.classList.toggle('hidden', !isEntrega);
+                cidadeEntregaGroup.classList.toggle('hidden', !isEntrega);
+                relatoGroup.classList.toggle('hidden', isEntrega);
+                ocupantesGroup.classList.toggle('hidden', tipo !== 'Abordagem');
+            };
+            
+            const cidadeSelect = document.getElementById('cidade-entrega-select');
+            try {
+                const response = await fetch('/api/municipios');
+                const { municipios } = await response.json();
+                cidadeSelect.innerHTML = '<option value="">Selecione a cidade...</option>';
+                municipios.forEach(m => cidadeSelect.add(new Option(m, m)));
+            } catch (error) {
+                cidadeSelect.innerHTML = '<option value="">Erro ao carregar cidades</option>';
+            }
+
+            selectTipo.addEventListener('change', toggleFields);
+            toggleFields();
+
+            const dateInputs = formContainer.querySelectorAll('.date-input');
+            dateInputs.forEach(input => {
+                if (!input.value) input.classList.add('date-input-empty');
+                input.addEventListener('change', () => input.classList.toggle('date-input-empty', !input.value));
+            });
+
+            formContainer.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const feedback = document.getElementById('form-feedback');
+                feedback.innerHTML = '';
+
+                const dataInicio = document.getElementById('data-inicio').value;
+                const horaInicio = document.getElementById('hora-inicio').value;
+                if (!dataInicio || !horaInicio) {
+                    feedback.innerHTML = '<p class="text-red-500">Data e Hora inicial são obrigatórias.</p>';
+                    return;
+                }
+                
+                const tipoSelecionado = selectTipo.value;
+                let relatoFinal = null;
+
+                if (tipoSelecionado === 'Local de Entrega') {
+                    relatoFinal = document.getElementById('cidade-entrega-select').value;
+                    if (!relatoFinal) {
+                         feedback.innerHTML = '<p class="text-red-500">A cidade da entrega é obrigatória.</p>';
+                         return;
+                    }
+                } else {
+                    relatoFinal = document.getElementById('relato').value;
+                }
+
+                const payload = {
+                    veiculo_id: currentVeiculoId,
+                    tipo: tipoSelecionado,
+                    datahora: `${dataInicio}T${horaInicio}`,
+                    datahora_fim: null,
+                    relato: relatoFinal,
+                    ocupantes: document.getElementById('ocupantes').value,
+                };
+                
+                if (tipoSelecionado === 'Local de Entrega') {
+                    const dataFim = document.getElementById('data-fim').value;
+                    const horaFim = document.getElementById('hora-fim').value;
+                    if(dataFim && horaFim) payload.datahora_fim = `${dataFim}T${horaFim}`;
+                }
+                
+                try {
+                    const response = await fetch('/api/ocorrencia', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Erro.');
+                    feedback.innerHTML = `<p class="text-green-500">${result.message}</p>`;
+                    formContainer.reset();
+                    toggleFields();
+                    handleConsultaSearch();
+                } catch (error) {
+                    feedback.innerHTML = `<p class="text-red-500">Erro ao guardar: ${error.message}</p>`;
+                }
+            });
+        }
+
+        // --- PÁGINA DE ANÁLISE ---
+        async function renderAnalisePage() {
+            mainContent.innerHTML = `
+                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">📊 Dashboard de Análise</h1></div>
+                <div class="container-content space-y-8">
+                    <div class="data-card">
+                        <h3 class="text-xl font-semibold">🔎 Filtro</h3>
+                        <div class="mt-4">
+                            <label for="local-entrega-select" class="block text-gray-700">Filtre por Local de Entrega:</label>
+                            <select id="local-entrega-select" multiple class="mt-1 block w-full rounded-lg border-gray-300 h-32"></select>
+                            <button id="analise-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Analisar</button>
+                        </div>
+                    </div>
+                    <div id="charts-container" class="space-y-8"></div>
+                </div>`;
+            
+            try {
+                const select = document.getElementById('local-entrega-select');
+                const { locais } = await (await fetch('/api/analise/filtros')).json();
+                locais.forEach(local => select.add(new Option(local, local)));
+            } catch (error) {
+                document.getElementById('charts-container').innerHTML = `<p class="text-red-500">Falha ao carregar filtros.</p>`;
+            }
+            document.getElementById('analise-btn').addEventListener('click', handleAnaliseSearch);
+            handleAnaliseSearch(); 
+        }
+
+        async function handleAnaliseSearch() {
+            const container = document.getElementById('charts-container');
+            showLoader(container);
+            const selectedLocais = Array.from(document.getElementById('local-entrega-select').selectedOptions).map(opt => opt.value);
+            const query = new URLSearchParams(selectedLocais.map(l => ['locais', l])).toString();
+
+            try {
+                const data = await (await fetch(`/api/analise?${query}`)).json();
+                if (data.error) throw new Error(data.error);
+                displayAnaliseCharts(data, container);
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            }
+        }
+
+        function displayAnaliseCharts(data, container) {
+            container.innerHTML = `
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">📈 Análise de IDA</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                        <div id="ida-municipio"></div><div id="ida-rodovia"></div><div id="ida-hora"></div><div id="ida-dia_semana"></div>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <h3 class="text-xl font-semibold">📉 Análise de VOLTA</h3>
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                        <div id="volta-municipio"></div><div id="volta-rodovia"></div><div id="volta-hora"></div><div id="volta-dia_semana"></div>
+                    </div>
+                </div>
+            `;
+            const plotConfig = { responsive: true, displaylogo: false };
+            const plotData = (divId, chartData, title) => {
+                if (chartData?.labels?.length > 0) {
+                    Plotly.newPlot(divId, [{ x: chartData.labels, y: chartData.data, type: 'bar' }], { title }, plotConfig);
+                } else {
+                    document.getElementById(divId).innerHTML = `<p class="text-center text-gray-500 p-4">Sem dados para "${title}"</p>`;
+                }
+            };
+            plotData('ida-municipio', data.ida.municipio, 'Top Municípios (Ida)');
+            plotData('ida-rodovia', data.ida.rodovia, 'Top Autoestradas (Ida)');
+            plotData('ida-hora', data.ida.hora, 'Passagens por Hora (Ida)');
+            plotData('ida-dia_semana', data.ida.dia_semana, 'Passagens por Dia (Ida)');
+            plotData('volta-municipio', data.volta.municipio, 'Top Municípios (Volta)');
+            plotData('volta-rodovia', data.volta.rodovia, 'Top Autoestradas (Volta)');
+            plotData('volta-hora', data.volta.hora, 'Passagens por Hora (Volta)');
+            plotData('volta-dia_semana', data.volta.dia_semana, 'Passagens por Dia (Volta)');
+        }
+
+        // --- INICIALIZAÇÃO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            btnConsulta.addEventListener('click', () => renderPage('consulta'));
+            btnAnalise.addEventListener('click', () => renderPage('analise'));
+            document.getElementById('modal-save-btn').addEventListener('click', handleModalSave);
+            renderPage('consulta');
+        });
+    </script>
+</body>
+</html>
+

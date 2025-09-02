@@ -31,8 +31,6 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
             "local_emplacamento": None,
             "transferencia_recente": False,
             "comunicacao_venda": False,
-            "suspeito": False,
-            "relevante": False,
             "crime_prf": False,
             "abordagem_prf": False,
         },
@@ -192,8 +190,8 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
         cur.execute("""
             INSERT INTO veiculos (placa, marca_modelo, tipo, ano_modelo, cor,
                                   local_emplacamento, transferencia_recente, comunicacao_venda,
-                                  suspeito, relevante, crime_prf, abordagem_prf)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                  crime_prf, abordagem_prf)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (placa) DO UPDATE SET
                 marca_modelo = EXCLUDED.marca_modelo,
                 tipo = EXCLUDED.tipo,
@@ -202,8 +200,6 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
                 local_emplacamento = EXCLUDED.local_emplacamento,
                 transferencia_recente = EXCLUDED.transferencia_recente,
                 comunicacao_venda = EXCLUDED.comunicacao_venda,
-                suspeito = EXCLUDED.suspeito,
-                relevante = EXCLUDED.relevante,
                 crime_prf = EXCLUDED.crime_prf,
                 abordagem_prf = EXCLUDED.abordagem_prf
             RETURNING id;
@@ -211,7 +207,6 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
             dados["veiculo"]["placa"], dados["veiculo"]["marca_modelo"], dados["veiculo"]["tipo"],
             dados["veiculo"]["ano_modelo"], dados["veiculo"]["cor"], dados["veiculo"]["local_emplacamento"],
             dados["veiculo"]["transferencia_recente"], dados["veiculo"]["comunicacao_venda"],
-            dados["veiculo"]["suspeito"], dados["veiculo"]["relevante"],
             dados["veiculo"]["crime_prf"], dados["veiculo"]["abordagem_prf"]
         ))
         veiculo_id = cur.fetchone()[0] if cur.rowcount > 0 else None
