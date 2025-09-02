@@ -27,6 +27,7 @@
         }
         .modal-input { width: 100%; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem; }
         .date-input-empty { color: #a0aec0; }
+        .ocupante-campo-group, .apreensao-campo-group, .preso-campo-group, .veiculo-campo-group { margin-bottom: 1rem; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen">
@@ -35,7 +36,7 @@
         <h1 class="text-2xl font-bold mb-6 text-center md:text-left">Sentinela IA</h1>
         <div class="flex flex-row md:flex-col gap-4 w-full">
             <button id="btn-consulta" class="w-full py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700">Consulta</button>
-            <button id="btn-analise" class="w-full py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700">Análise</button>
+            <button id="btn-nova-ocorrencia" class="w-full py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-700">Nova Ocorrência</button>
         </div>
     </aside>
 
@@ -43,7 +44,7 @@
 
     <!-- MODAL DE EDIÇÃO -->
     <div id="edit-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+        <div class="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-xl w-full max-w-md overflow-y-auto max-h-screen">
             <h3 id="modal-title" class="text-2xl font-bold mb-4">Editar Registo</h3>
             <form id="modal-form" class="space-y-4"></form>
             <div id="modal-feedback" class="mt-4 text-sm"></div>
@@ -57,15 +58,12 @@
     <script>
         const mainContent = document.getElementById('main-content');
         const btnConsulta = document.getElementById('btn-consulta');
-        const btnAnalise = document.getElementById('btn-analise');
-        let currentVeiculoId = null;
-        let currentEditData = {};
+        const btnNovaOcorrencia = document.getElementById('btn-nova-ocorrencia');
+        let currentSearchData = {};
 
         // --- LÓGICA DO MODAL DE EDIÇÃO ---
         function openEditModal(type, dataString) {
             const data = JSON.parse(decodeURIComponent(dataString));
-            currentEditData = { type, data };
-            
             const modal = document.getElementById('edit-modal');
             const form = document.getElementById('modal-form');
             const title = document.getElementById('modal-title');
@@ -77,14 +75,104 @@
                 form.innerHTML = `
                     <input type="hidden" name="id" value="${data.id}">
                     <div><label class="block">Nome</label><input type="text" name="nome" value="${data.nome || ''}" class="modal-input"></div>
-                    <div><label class="block">CPF/CNPJ</label><input type="text" name="cpf_cnpj" value="${data.cpf_cnpj || ''}" class="modal-input"></div>
+                    <div><label class="block">CPF</label><input type="text" name="cpf_cnpj" value="${data.cpf_cnpj || ''}" class="modal-input"></div>
                 `;
             } else if (type === 'ocorrencia') {
-                 form.innerHTML = `
+                // Formata a data e hora sem conversão de fuso horário
+                const datahora_str = data.datahora ? data.datahora.split('T')[0] : '';
+                const hora_str = data.datahora ? data.datahora.split('T')[1].substring(0, 5) : '';
+
+                const datahora_fim_str = data.datahora_fim ? data.datahora_fim.split('T')[0] : '';
+                const hora_fim_str = data.datahora_fim ? data.datahora_fim.split('T')[1].substring(0, 5) : '';
+
+                let formHtml = `
                     <input type="hidden" name="id" value="${data.id}">
-                    <div><label class="block">Tipo</label><input type="text" name="tipo" value="${data.tipo || ''}" class="modal-input" readonly></div>
-                    <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
+                    <input type="hidden" name="tipo" value="${data.tipo}">
+                    <div><label class="block">Tipo</label><input type="text" value="${data.tipo.replace('Local de Entrega', 'Local de Entrega da Droga') || ''}" class="modal-input" readonly></div>
+                    <div>
+                        <label class="block">Data/Hora de Início</label>
+                        <input type="date" name="datahora_date" value="${datahora_str}" class="modal-input inline-block w-1/2">
+                        <input type="time" name="datahora_time" value="${hora_str}" class="modal-input inline-block w-1/2">
+                    </div>
                 `;
+
+                if (data.tipo === 'Local de Entrega') {
+                    formHtml += `
+                        <div>
+                            <label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea>
+                        </div>
+                        <div>
+                            <label class="block">Data/Hora Final</label>
+                            <input type="date" name="datahora_fim_date" value="${datahora_fim_str}" class="modal-input inline-block w-1/2">
+                            <input type="time" name="datahora_fim_time" value="${hora_fim_str}" class="modal-input inline-block w-1/2">
+                        </div>
+                    `;
+                } else if (data.tipo === 'Abordagem') {
+                     const ocupantes = data.ocupantes ? JSON.parse(data.ocupantes) : [];
+                     formHtml += `
+                         <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
+                         <div id="ocupantes-container" class="space-y-4">
+                             <label class="block text-gray-700 font-semibold mb-2">Ocupantes</label>
+                             ${ocupantes.map(o => `
+                                 <div class="ocupante-campo-group border-b pb-4 flex items-center gap-2">
+                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                                         <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="ocupante-cpf" value="${o.cpf_cnpj || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do ocupante"></div>
+                                         <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="ocupante-nome" value="${o.nome || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do ocupante"></div>
+                                     </div>
+                                     <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                                 </div>
+                             `).join('')}
+                         </div>
+                         <button type="button" onclick="addDynamicField('ocupantes')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Ocupante</button>
+                     `;
+                } else if (data.tipo === 'BOP') {
+                    const apreensoes = data.apreensoes ? JSON.parse(data.apreensoes) : [];
+                    const presos = data.presos ? JSON.parse(data.presos) : [];
+                    const veiculos = data.veiculos ? JSON.parse(data.veiculos) : [];
+                    
+                    formHtml += `
+                        <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
+                        <div id="apreensoes-container" class="space-y-4">
+                            <label class="block text-gray-700 font-semibold mb-2">Apreensões</label>
+                            ${apreensoes.map(a => `
+                                <div class="apreensao-campo-group border-b pb-4 flex items-center gap-2">
+                                    <div class="flex-grow"><input type="text" name="apreensao" value="${a || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" onclick="addDynamicField('apreensoes')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Apreensão</button>
+
+                        <div id="presos-container" class="space-y-4">
+                            <label class="block text-gray-700 font-semibold mb-2">Presos</label>
+                            ${presos.map(p => `
+                                <div class="preso-campo-group border-b pb-4 flex items-center gap-2">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="preso-cpf" value="${p.cpf_cnpj || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do preso"></div>
+                                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="preso-nome" value="${p.nome || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do preso"></div>
+                                    </div>
+                                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" onclick="addDynamicField('presos')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Preso</button>
+
+                        <div id="veiculos-envolvidos-container" class="space-y-4">
+                            <label class="block text-gray-700 font-semibold mb-2">Veículos Envolvidos</label>
+                            ${veiculos.map(v => `
+                                <div class="veiculo-campo-group border-b pb-4 flex items-center gap-2">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                                        <div><label class="block text-sm text-gray-600">Placa</label><input type="text" name="veiculo-placa" value="${v.placa || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Placa do veículo"></div>
+                                        <div><label class="block text-sm text-gray-600">Modelo</label><input type="text" name="veiculo-modelo" value="${v.modelo || ''}" class="w-full px-2 py-1 border rounded-lg" placeholder="Modelo do veículo"></div>
+                                    </div>
+                                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" onclick="addDynamicField('veiculos')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Veículo</button>
+                    `;
+                }
+                form.innerHTML = formHtml;
             }
             modal.classList.remove('hidden');
         }
@@ -94,8 +182,119 @@
         }
 
         async function handleModalSave() {
-            alert('A funcionalidade de guardar a edição ainda não foi implementada no backend.');
-            closeModal();
+            const modalTitle = document.getElementById('modal-title').textContent;
+            const type = modalTitle.includes('Pessoa') ? 'pessoa' : 'ocorrencia';
+            const form = document.getElementById('modal-form');
+            const feedbackEl = document.getElementById('modal-feedback');
+            const id = form.querySelector('input[name="id"]').value;
+
+            let payloadData = {};
+            if (type === 'pessoa') {
+                payloadData = {
+                    nome: form.querySelector('input[name="nome"]').value,
+                    cpf_cnpj: form.querySelector('input[name="cpf_cnpj"]').value
+                };
+            } else if (type === 'ocorrencia') {
+                const tipo = form.querySelector('input[name="tipo"]').value;
+                const relato = form.querySelector('textarea[name="relato"]').value;
+
+                // Captura a data e hora de início do formulário
+                const dataInicio = form.querySelector('input[name="datahora_date"]').value;
+                const horaInicio = form.querySelector('input[name="datahora_time"]').value;
+                let datahora_inicio = null;
+                if (dataInicio && horaInicio) {
+                    datahora_inicio = `${dataInicio}T${horaInicio}`;
+                }
+                let datahora_fim = null;
+                const dataFimInput = form.querySelector('input[name="datahora_fim_date"]');
+                if (dataFimInput) {
+                    const dataFim = dataFimInput.value;
+                    const horaFim = form.querySelector('input[name="datahora_fim_time"]').value;
+                    if (dataFim && horaFim) datahora_fim = `${dataFim}T${horaFim}`;
+                }
+
+                payloadData = {
+                    datahora: datahora_inicio, // Adicionado para enviar a data de início
+                    relato: relato,
+                    datahora_fim: datahora_fim
+                };
+
+                if (tipo === 'Abordagem') {
+                    const ocupantesList = Array.from(form.querySelectorAll('.ocupante-campo-group')).map(group => ({
+                        nome: group.querySelector('input[name="ocupante-nome"]').value,
+                        cpf_cnpj: group.querySelector('input[name="ocupante-cpf"]').value
+                    })).filter(o => o.nome || o.cpf_cnpj);
+                    payloadData.ocupantes = JSON.stringify(ocupantesList);
+                } else if (tipo === 'BOP') {
+                     const apreensoesList = Array.from(form.querySelectorAll('input[name="apreensao"]')).map(input => input.value.trim()).filter(val => val);
+                     payloadData.apreensoes = JSON.stringify(apreensoesList);
+
+                     const presosList = Array.from(form.querySelectorAll('.preso-campo-group')).map(group => ({
+                         nome: group.querySelector('input[name="preso-nome"]').value,
+                         cpf_cnpj: group.querySelector('input[name="preso-cpf"]').value
+                     })).filter(p => p.nome || p.cpf_cnpj);
+                     payloadData.presos = JSON.stringify(presosList);
+                     
+                     const veiculosList = Array.from(form.querySelectorAll('.veiculo-campo-group')).map(group => ({
+                         placa: group.querySelector('input[name="veiculo-placa"]').value,
+                         modelo: group.querySelector('input[name="veiculo-modelo"]').value
+                     })).filter(v => v.placa || v.modelo);
+                     payloadData.veiculos = JSON.stringify(veiculosList);
+                }
+            }
+            feedbackEl.innerHTML = 'A guardar...';
+
+            try {
+                const response = await fetch(`/api/${type}/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payloadData)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                feedbackEl.innerHTML = `<p class="text-green-500">${result.message}</p>`;
+                setTimeout(() => {
+                    closeModal();
+                    handleConsultaSearch(); 
+                }, 1500);
+            } catch (error) {
+                feedbackEl.innerHTML = `<p class="text-red-500">Erro ao guardar: ${error.message}</p>`;
+            }
+        }
+        
+        function addDynamicField(containerId) {
+            const container = document.getElementById(containerId + '-container');
+            if (!container) return;
+
+            const newGroup = document.createElement('div');
+            newGroup.className = 'border-b pb-4 flex items-center gap-2';
+
+            if (containerId === 'ocupantes' || containerId === 'presos') {
+                newGroup.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="${containerId}-cpf" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do ${containerId}"></div>
+                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="${containerId}-nome" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do ${containerId}"></div>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                `;
+            } else if (containerId === 'veiculos') {
+                newGroup.className = 'veiculo-campo-group border-b pb-4 flex items-center gap-2';
+                newGroup.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                        <div><label class="block text-sm text-gray-600">Placa</label><input type="text" name="veiculo-placa" class="w-full px-2 py-1 border rounded-lg" placeholder="Placa do veículo"></div>
+                        <div><label class="block text-sm text-gray-600">Modelo</label><input type="text" name="veiculo-modelo" class="w-full px-2 py-1 border rounded-lg" placeholder="Modelo do veículo"></div>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                 `;
+            } else if (containerId === 'apreensoes') {
+                newGroup.className = 'apreensao-campo-group border-b pb-4 flex items-center gap-2';
+                newGroup.innerHTML = `
+                    <div class="flex-grow"><input type="text" name="apreensao" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                `;
+            }
+
+            container.appendChild(newGroup);
         }
 
         // --- LÓGICA DE EXCLUSÃO ---
@@ -136,10 +335,10 @@
         // --- RENDERIZAÇÃO E BUSCA ---
         function renderPage(page) {
             mainContent.innerHTML = '';
-            btnConsulta.classList.replace(page === 'analise' ? 'bg-blue-600' : 'bg-gray-600', page === 'analise' ? 'bg-gray-600' : 'bg-blue-600');
-            btnAnalise.classList.replace(page === 'consulta' ? 'bg-blue-600' : 'bg-gray-600', page === 'consulta' ? 'bg-gray-600' : 'bg-blue-600');
+            btnConsulta.classList.replace(page === 'nova-ocorrencia' ? 'bg-blue-600' : 'bg-gray-600', page === 'nova-ocorrencia' ? 'bg-gray-600' : 'bg-blue-600');
+            btnNovaOcorrencia.classList.replace(page === 'consulta' ? 'bg-blue-600' : 'bg-gray-600', page === 'consulta' ? 'bg-gray-600' : 'bg-blue-600');
             if (page === 'consulta') renderConsultaPage();
-            else if (page === 'analise') renderAnalisePage();
+            else if (page === 'nova-ocorrencia') renderNovaOcorrenciaPage();
         }
         
         function showLoader(container) {
@@ -148,30 +347,50 @@
 
         function renderConsultaPage() {
             mainContent.innerHTML = `
-                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">🚔 Consulta de Veículos</h1></div>
+                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">🚔 Consulta</h1></div>
                 <div class="container-content">
                     <div class="mb-6">
-                        <label for="placa-input" class="block font-semibold mb-2">Digite a matrícula:</label>
-                        <input type="text" id="placa-input" placeholder="Ex: ABC1234" class="w-full px-4 py-2 border rounded-lg uppercase" />
+                        <label for="search-type" class="block font-semibold mb-2">Tipo de Busca:</label>
+                        <select id="search-type" class="w-full p-2 border rounded-lg">
+                            <option value="placa">Placa</option>
+                            <option value="cpf">CPF</option>
+                        </select>
+                        <div class="mt-4">
+                            <label id="search-label" for="search-input" class="block font-semibold mb-2">Digite a Placa:</label>
+                            <input type="text" id="search-input" class="w-full px-4 py-2 border rounded-lg uppercase" />
+                        </div>
                         <button id="search-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Consultar</button>
                     </div>
                     <div id="consulta-result" class="space-y-6"></div>
                 </div>`;
+
+            const searchTypeSelect = document.getElementById('search-type');
+            const searchInput = document.getElementById('search-input');
+            const searchLabel = document.getElementById('search-label');
+
+            searchTypeSelect.addEventListener('change', (e) => {
+                const isPlaca = e.target.value === 'placa';
+                searchLabel.textContent = isPlaca ? 'Digite a Placa:' : 'Digite o CPF:';
+                searchInput.placeholder = isPlaca ? 'Ex: ABC1234' : 'Ex: 123.456.789-00';
+                searchInput.className = isPlaca ? 'w-full px-4 py-2 border rounded-lg uppercase' : 'w-full px-4 py-2 border rounded-lg';
+            });
+
             document.getElementById('search-btn').addEventListener('click', handleConsultaSearch);
         }
 
         async function handleConsultaSearch() {
-            const placaInput = document.getElementById('placa-input');
-            const placa = placaInput ? placaInput.value : (document.getElementById('placa-display') ? document.getElementById('placa-display').textContent : null);
+            const searchType = document.getElementById('search-type').value;
+            const searchValue = document.getElementById('search-input').value;
             const resultDiv = document.getElementById('consulta-result');
-            if (!placa) return;
+            if (!searchValue) return;
 
             showLoader(resultDiv);
+            currentSearchData = { type: searchType, value: searchValue };
+            
             try {
-                const response = await fetch(`/api/consulta/${placa}`);
-                if (!response.ok) throw new Error((await response.json()).error || 'Matrícula não encontrada.');
+                const response = await fetch(`/api/consulta_${searchType}/${searchValue}`);
+                if (!response.ok) throw new Error((await response.json()).error || 'Valor não encontrado.');
                 const data = await response.json();
-                currentVeiculoId = data.veiculo.id;
                 displayConsultaResults(data, resultDiv);
             } catch (error) {
                 resultDiv.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
@@ -179,49 +398,83 @@
         }
         
         function displayConsultaResults(data, container) {
-            const { veiculo, pessoas, passagens, ocorrencias } = data;
-            const formatDate = (d) => d ? new Date(d).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}) : 'N/D';
-            const formatBool = (v) => v ? 'Sim' : 'Não';
-            const formatCpf = (c) => (c || '').replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            const { veiculos, pessoas, passagens, ocorrencias } = data;
+            const formatDate = (d) => {
+                if (!d) return 'N/D';
+                // A data vem do servidor como "2025-08-25T20:20:00"
+                // Vamos tratar como texto para evitar conversão de fuso horário.
+                const [datePart, timePart] = d.split('T');
+                const [year, month, day] = datePart.split('-');
+                const time = timePart.substring(0, 5); // Pega apenas HH:mm
+                
+                // Retorna no formato "DD/MM/AAAA HH:mm"
+                return `${day}/${month}/${year} ${time}`;
+            };
+            const formatCpfCnpj = (doc) => {
+                if (!doc) return 'N/D';
+                
+                // 1. Garante que o valor é uma string e remove todos os caracteres não numéricos
+                const cleaned = String(doc).replace(/\D/g, '');
+
+                // 2. Verifica o comprimento e aplica a máscara correta
+                if (cleaned.length === 11) {
+                    // Formato CPF: 123.456.789-00
+                    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+
+                if (cleaned.length === 14) {
+                    // Formato CNPJ: 12.345.678/0001-90
+                    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+                }
+
+                // 3. Se não for nem CPF nem CNPJ, retorna apenas os números
+                return cleaned; 
+            };
             const escapeData = (d) => encodeURIComponent(JSON.stringify(d));
 
-            container.innerHTML = `
+            const veiculosHtml = veiculos.map(veiculo => `
                 <div class="data-card">
                     <h3 class="text-xl font-semibold">🚘 Dados do Veículo</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <p><strong>Matrícula:</strong> <span id="placa-display">${veiculo.placa || 'N/D'}</span></p>
+                        <p><strong>Placa:</strong> <span class="placa-display">${veiculo.placa || 'N/D'}</span></p>
                         <p><strong>Marca/Modelo:</strong> ${veiculo.marca_modelo || 'N/D'}</p>
                         <p><strong>Tipo:</strong> ${veiculo.tipo || 'N/D'}</p>
                         <p><strong>Ano/Modelo:</strong> ${veiculo.ano_modelo || 'N/D'}</p>
                         <p><strong>Cor:</strong> ${veiculo.cor || 'N/D'}</p>
-                        <p><strong>Local de Matrícula:</strong> ${veiculo.local_emplacamento || 'N/D'}</p>
-                        <p><strong>Transf. Recente:</strong> ${formatBool(veiculo.transferencia_recente)}</p>
-                        <p><strong>Comun. Venda:</strong> ${formatBool(veiculo.comunicacao_venda)}</p>
-                        <p><strong>Crime PRF:</strong> ${formatBool(veiculo.crime_prf)}</p>
-                        <p><strong>Abordagem PRF:</strong> ${formatBool(veiculo.abordagem_prf)}</p>
+                        <p><strong>Local da Placa:</strong> ${veiculo.local_emplacamento || 'N/D'}</p>
                     </div>
                 </div>
+            `).join('');
+
+            container.innerHTML = `
+                ${veiculos.length > 0 ? veiculosHtml : ''}
                 <div class="data-card">
                     <h3 class="text-xl font-semibold">👥 Pessoas Relacionadas</h3>
                     <table class="min-w-full text-sm text-left">
-                        <thead class="bg-gray-100"><tr><th class="p-2">Nome</th><th class="p-2">CPF</th><th class="p-2">Ações</th></tr></thead>
-                        <tbody>${pessoas.map(p => `
+                        <thead class="bg-gray-100"><tr><th class="p-2">Placa</th><th class="p-2">Nome</th><th class="p-2">CPF</th><th class="p-2">Ações</th></tr></thead>
+                        <tbody>${pessoas.map(p => {
+                            const veiculoAssociado = veiculos.find(v => v.id === p.veiculo_id);
+                            return `
                             <tr class="border-b">
-                                <td class="p-2">${p.nome}</td><td class="p-2">${formatCpf(p.cpf_cnpj)}</td>
+                                <td class="p-2">${veiculoAssociado ? veiculoAssociado.placa : 'N/D'}</td>
+                                <td class="p-2">${p.nome}</td>
+                                <td class="p-2">${formatCpfCnpj(p.cpf_cnpj)}</td>
                                 <td class="p-2">
                                     <button onclick="openEditModal('pessoa', '${escapeData(p)}')" class="action-btn bg-yellow-400 hover:bg-yellow-500">Editar</button>
                                     <button onclick="deleteItem('pessoa', ${p.id})" class="action-btn bg-red-500 hover:bg-red-600 text-white">Excluir</button>
                                 </td>
-                            </tr>`).join('') || '<tr><td colspan="3" class="p-2">Nenhuma pessoa encontrada.</td></tr>'}
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="4" class="p-2">Nenhuma pessoa encontrada.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
                 <div class="data-card">
                     <h3 class="text-xl font-semibold">🚨 Ocorrências</h3>
                     <table class="min-w-full text-sm text-left">
-                         <thead class="bg-gray-100"><tr><th class="p-2">Tipo</th><th class="p-2">Data/Hora</th><th class="p-2">Relato</th><th class="p-2">Ações</th></tr></thead>
+                         <thead class="bg-gray-100"><tr><th class="p-2">Placa</th><th class="p-2">Tipo</th><th class="p-2">Data/Hora</th><th class="p-2">Relato</th><th class="p-2">Ações</th></tr></thead>
                          <tbody>${ocorrencias.map(o => `
                             <tr class="border-b">
+                                <td class="p-2">${o.placa || 'N/D'}</td>
                                 <td class="p-2">${o.tipo.replace('Local de Entrega', 'Local de Entrega da Droga')}</td>
                                 <td class="p-2">${formatDate(o.datahora)}</td>
                                 <td class="p-2">${o.relato || ''}</td>
@@ -229,36 +482,87 @@
                                     <button onclick="openEditModal('ocorrencia', '${escapeData(o)}')" class="action-btn bg-yellow-400 hover:bg-yellow-500">Editar</button>
                                     <button onclick="deleteItem('ocorrencia', ${o.id})" class="action-btn bg-red-500 hover:bg-red-600 text-white">Excluir</button>
                                 </td>
-                            </tr>`).join('') || '<tr><td colspan="4" class="p-2">Nenhuma ocorrência encontrada.</td></tr>'}
+                            </tr>`).join('') || '<tr><td colspan="5" class="p-2">Nenhuma ocorrência encontrada.</td></tr>'}
                          </tbody>
                     </table>
                 </div>
                 <div class="data-card">
                     <h3 class="text-xl font-semibold">📍 Passagens</h3>
                     <table class="min-w-full text-sm text-left">
-                         <thead class="bg-gray-100"><tr><th class="p-2">Data/Hora</th><th class="p-2">Local</th><th class="p-2">Autoestrada</th><th class="p-2">Ilícito (Ida)</th><th class="p-2">Ilícito (Volta)</th></tr></thead>
+                         <thead class="bg-gray-100"><tr><th class="p-2">Placa</th><th class="p-2">Data/Hora</th><th class="p-2">Local</th><th class="p-2">Autoestrada</th><th class="p-2">Ilícito (Ida)</th><th class="p-2">Ilícito (Volta)</th></tr></thead>
                          <tbody>${passagens.map(p => `
                             <tr class="border-b">
+                                <td class="p-2">${p.placa || 'N/D'}</td>
                                 <td class="p-2">${formatDate(p.datahora)}</td>
                                 <td class="p-2">${p.municipio}/${p.estado}</td>
                                 <td class="p-2">${p.rodovia || ''}</td>
                                 <td class="p-2 text-center"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'ida')" ${p.ilicito_ida ? 'checked' : ''}></td>
-                                <td class="p-2 text-center"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'volta')" ${p.ilicito_volta ? 'checked' : ''}><span class="text-green-500 text-xs ml-2" id="passagem-feedback-${p.id}"></span></td>
-                            </tr>`).join('') || '<tr><td colspan="5" class="p-2">Nenhuma passagem encontrada.</td></tr>'}
+                                <td class="p-2 text-center flex items-center justify-center gap-2"><input type="checkbox" onchange="updatePassagem(this, ${p.id}, 'volta')" ${p.ilicito_volta ? 'checked' : ''}><span class="text-green-500 text-xs" id="passagem-feedback-${p.id}"></span></td>
+                            </tr>`).join('') || '<tr><td colspan="6" class="p-2">Nenhuma passagem encontrada.</td></tr>'}
                          </tbody>
                     </table>
                 </div>
+            `;
+        }
+
+        async function renderNovaOcorrenciaPage() {
+            mainContent.innerHTML = `
+                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">✍️ Nova Ocorrência</h1></div>
+                <div class="container-content space-y-6">
+                    <div class="mb-6">
+                        <label for="nova-ocorrencia-search-input" class="block font-semibold mb-2">Digite a Placa do Veículo:</label>
+                        <input type="text" id="nova-ocorrencia-search-input" class="w-full px-4 py-2 border rounded-lg uppercase" placeholder="Ex: ABC1234" />
+                        <button id="nova-ocorrencia-search-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Buscar Veículo</button>
+                    </div>
+                    <div id="nova-ocorrencia-form-container"></div>
+                </div>
+            `;
+            
+            const searchInput = document.getElementById('nova-ocorrencia-search-input');
+            const searchBtn = document.getElementById('nova-ocorrencia-search-btn');
+            const formContainer = document.getElementById('nova-ocorrencia-form-container');
+
+            searchBtn.addEventListener('click', async () => {
+                const placa = searchInput.value;
+                if (!placa) {
+                    formContainer.innerHTML = `<p class="text-red-500">Por favor, digite a placa do veículo.</p>`;
+                    return;
+                }
+                
+                showLoader(formContainer);
+
+                try {
+                    const response = await fetch(`/api/consulta_placa/${placa}`);
+                    const data = await response.json();
+                    if (response.status === 404) {
+                        throw new Error("Matrícula não encontrada.");
+                    }
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Erro ao buscar veículo.');
+                    }
+                    
+                    const veiculo = data.veiculos[0];
+                    setupOcorrenciaForm(veiculo.id);
+
+                } catch (error) {
+                    formContainer.innerHTML = `<p class="text-red-500">❌ ${error.message}</p>`;
+                }
+            });
+        }
+
+        async function setupOcorrenciaForm(veiculoId) {
+            const formContainer = document.getElementById('nova-ocorrencia-form-container');
+            if (!formContainer) return;
+            formContainer.innerHTML = `
                 <div class="data-card">
                     <h3 class="text-xl font-semibold">✍️ Inserir Nova Ocorrência</h3>
                     <form id="ocorrencia-form" class="mt-4 space-y-4"></form>
                 </div>
             `;
-            setupOcorrenciaForm();
-        }
+            const form = document.getElementById('ocorrencia-form');
 
-        async function setupOcorrenciaForm() {
-            const formContainer = document.getElementById('ocorrencia-form');
-            formContainer.innerHTML = `
+            form.innerHTML = `
+                <input type="hidden" id="veiculo-id" value="${veiculoId}">
                 <div>
                     <label for="tipo-ocorrencia" class="block text-gray-700">Tipo</label>
                     <select id="tipo-ocorrencia" class="mt-1 block w-full rounded-lg border-gray-300">
@@ -282,7 +586,31 @@
                 </div>
 
                 <div id="relato-group"><label for="relato" class="block text-gray-700">Relato</label><textarea id="relato" rows="3" class="mt-1 block w-full rounded-lg border-gray-300"></textarea></div>
-                <div id="ocupantes-group"><label for="ocupantes" class="block text-gray-700">Ocupantes (CPFs)</label><input type="text" id="ocupantes" class="mt-1 block w-full rounded-lg border-gray-300" /></div>
+                
+                <div id="ocupantes-group" class="hidden">
+                    <label class="block text-gray-700 font-semibold mb-2">Ocupantes</label>
+                    <div id="ocupantes-container" class="space-y-4"></div>
+                    <button type="button" id="add-ocupante-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Ocupante</button>
+                </div>
+                
+                <div id="bop-group" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Apreensões</label>
+                        <div id="apreensoes-container" class="space-y-4"></div>
+                        <button type="button" id="add-apreensao-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Apreensão</button>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Presos</label>
+                        <div id="presos-container" class="space-y-4"></div>
+                        <button type="button" id="add-preso-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Preso</button>
+                    </div>
+                    <div>
+                         <label class="block text-gray-700 font-semibold mb-2">Veículos Envolvidos</label>
+                         <div id="veiculos-envolvidos-container" class="space-y-4"></div>
+                         <button type="button" id="add-veiculo-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Veículo</button>
+                    </div>
+                </div>
+
                 <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Guardar Ocorrência</button>
                 <div id="form-feedback" class="mt-4"></div>
             `;
@@ -292,16 +620,84 @@
             const ocupantesGroup = document.getElementById('ocupantes-group');
             const relatoGroup = document.getElementById('relato-group');
             const cidadeEntregaGroup = document.getElementById('cidade-entrega-group');
+            const ocupantesContainer = document.getElementById('ocupantes-container');
+            const addOcupanteBtn = document.getElementById('add-ocupante-btn');
+            const bopGroup = document.getElementById('bop-group');
+            const veiculosEnvolvidosContainer = document.getElementById('veiculos-envolvidos-container');
+            const addVeiculoBtn = document.getElementById('add-veiculo-btn');
+            const apreensoesContainer = document.getElementById('apreensoes-container');
+            const addApreensaoBtn = document.getElementById('add-apreensao-btn');
+            const presosContainer = document.getElementById('presos-container');
+            const addPresoBtn = document.getElementById('add-preso-btn');
 
             const toggleFields = () => {
                 const tipo = selectTipo.value;
                 const isEntrega = tipo === 'Local de Entrega';
+                const isBOP = tipo === 'BOP';
+                const isAbordagem = tipo === 'Abordagem';
+
                 dataFimGroup.classList.toggle('hidden', !isEntrega);
                 cidadeEntregaGroup.classList.toggle('hidden', !isEntrega);
                 relatoGroup.classList.toggle('hidden', isEntrega);
-                ocupantesGroup.classList.toggle('hidden', tipo !== 'Abordagem');
+                ocupantesGroup.classList.toggle('hidden', !isAbordagem);
+                bopGroup.classList.toggle('hidden', !isBOP);
+                
+                // Clear dynamic fields when toggling
+                ocupantesContainer.innerHTML = '';
+                apreensoesContainer.innerHTML = '';
+                presosContainer.innerHTML = '';
+                veiculosEnvolvidosContainer.innerHTML = '';
+            };
+
+            const addOccupantField = () => {
+                const newOcupanteGroup = document.createElement('div');
+                newOcupanteGroup.className = 'ocupante-campo-group border-b pb-4 flex items-center gap-2';
+                newOcupanteGroup.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="ocupante-cpf" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do ocupante"></div>
+                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="ocupante-nome" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do ocupante"></div>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                `;
+                ocupantesContainer.appendChild(newOcupanteGroup);
+            };
+
+            const addVeiculoField = () => {
+                 const newVeiculoGroup = document.createElement('div');
+                 newVeiculoGroup.className = 'veiculo-campo-group border-b pb-4 flex items-center gap-2';
+                 newVeiculoGroup.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                        <div><label class="block text-sm text-gray-600">Placa</label><input type="text" name="veiculo-placa" class="w-full px-2 py-1 border rounded-lg" placeholder="Placa do veículo"></div>
+                        <div><label class="block text-sm text-gray-600">Modelo</label><input type="text" name="veiculo-modelo" class="w-full px-2 py-1 border rounded-lg" placeholder="Modelo do veículo"></div>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                 `;
+                 veiculosEnvolvidosContainer.appendChild(newVeiculoGroup);
             };
             
+            const addApreensaoField = () => {
+                const newApreensaoGroup = document.createElement('div');
+                newApreensaoGroup.className = 'apreensao-campo-group border-b pb-4 flex items-center gap-2';
+                newApreensaoGroup.innerHTML = `
+                    <div class="flex-grow"><input type="text" name="apreensao" class="w-full px-2 py-1 border rounded-lg" placeholder="Ex: 5kg maconha"></div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                `;
+                apreensoesContainer.appendChild(newApreensaoGroup);
+            };
+
+            const addPresoField = () => {
+                const newPresoGroup = document.createElement('div');
+                newPresoGroup.className = 'preso-campo-group border-b pb-4 flex items-center gap-2';
+                newPresoGroup.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
+                        <div><label class="block text-sm text-gray-600">CPF</label><input type="text" name="preso-cpf" class="w-full px-2 py-1 border rounded-lg" placeholder="CPF do preso"></div>
+                        <div><label class="block text-sm text-gray-600">Nome</label><input type="text" name="preso-nome" class="w-full px-2 py-1 border rounded-lg" placeholder="Nome do preso"></div>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
+                `;
+                presosContainer.appendChild(newPresoGroup);
+            };
+
             const cidadeSelect = document.getElementById('cidade-entrega-select');
             try {
                 const response = await fetch('/api/municipios');
@@ -313,15 +709,20 @@
             }
 
             selectTipo.addEventListener('change', toggleFields);
+            addOcupanteBtn.addEventListener('click', addOccupantField);
+            addVeiculoBtn.addEventListener('click', addVeiculoField);
+            addApreensaoBtn.addEventListener('click', addApreensaoField);
+            addPresoBtn.addEventListener('click', addPresoField);
+            
             toggleFields();
 
-            const dateInputs = formContainer.querySelectorAll('.date-input');
+            const dateInputs = form.querySelectorAll('.date-input');
             dateInputs.forEach(input => {
                 if (!input.value) input.classList.add('date-input-empty');
                 input.addEventListener('change', () => input.classList.toggle('date-input-empty', !input.value));
             });
 
-            formContainer.addEventListener('submit', async (e) => {
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const feedback = document.getElementById('form-feedback');
                 feedback.innerHTML = '';
@@ -334,25 +735,75 @@
                 }
                 
                 const tipoSelecionado = selectTipo.value;
+                const veiculoId = document.getElementById('veiculo-id').value;
                 let relatoFinal = null;
-
+                let ocupantes = null;
+                let presos = null;
+                let apreensoes = null;
+                let veiculos = null;
+                
                 if (tipoSelecionado === 'Local de Entrega') {
                     relatoFinal = document.getElementById('cidade-entrega-select').value;
                     if (!relatoFinal) {
                          feedback.innerHTML = '<p class="text-red-500">A cidade da entrega é obrigatória.</p>';
                          return;
                     }
-                } else {
+                } else if (tipoSelecionado === 'Abordagem') {
+                     const nomes = document.querySelectorAll('input[name="ocupante-nome"]');
+                     const cpfs = document.querySelectorAll('input[name="ocupante-cpf"]');
+                     const ocupantesList = [];
+                     for (let i = 0; i < nomes.length; i++) {
+                         if (nomes[i].value.trim() || cpfs[i].value.trim()) {
+                            ocupantesList.push({
+                                nome: nomes[i].value.trim(),
+                                cpf_cnpj: cpfs[i].value.trim()
+                            });
+                         }
+                     }
+                     ocupantes = JSON.stringify(ocupantesList);
+                     relatoFinal = document.getElementById('relato').value;
+                } else if (tipoSelecionado === 'BOP') {
+                    const apreensoesList = Array.from(document.querySelectorAll('input[name="apreensao"]')).map(input => input.value.trim()).filter(val => val);
+                    apreensoes = JSON.stringify(apreensoesList);
+                    
+                     const nomesPresos = document.querySelectorAll('input[name="preso-nome"]');
+                     const cpfsPresos = document.querySelectorAll('input[name="preso-cpf"]');
+                     const presosList = [];
+                     for (let i = 0; i < nomesPresos.length; i++) {
+                         if (nomesPresos[i].value.trim() || cpfsPresos[i].value.trim()) {
+                            presosList.push({
+                                nome: nomesPresos[i].value.trim(),
+                                cpf_cnpj: cpfsPresos[i].value.trim()
+                            });
+                         }
+                     }
+                    presos = JSON.stringify(presosList);
+                    
+                    const placas = document.querySelectorAll('input[name="veiculo-placa"]');
+                    const modelos = document.querySelectorAll('input[name="veiculo-modelo"]');
+                    const veiculosList = [];
+                     for (let i = 0; i < placas.length; i++) {
+                         if (placas[i].value.trim() || modelos[i].value.trim()) {
+                            veiculosList.push({
+                                placa: placas[i].value.trim(),
+                                modelo: modelos[i].value.trim()
+                            });
+                         }
+                     }
+                     veiculos = JSON.stringify(veiculosList);
                     relatoFinal = document.getElementById('relato').value;
                 }
 
                 const payload = {
-                    veiculo_id: currentVeiculoId,
+                    veiculo_id: veiculoId,
                     tipo: tipoSelecionado,
                     datahora: `${dataInicio}T${horaInicio}`,
                     datahora_fim: null,
                     relato: relatoFinal,
-                    ocupantes: document.getElementById('ocupantes').value,
+                    ocupantes: ocupantes,
+                    presos: presos,
+                    apreensoes: apreensoes,
+                    veiculos: veiculos
                 };
                 
                 if (tipoSelecionado === 'Local de Entrega') {
@@ -370,98 +821,24 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || 'Erro.');
                     feedback.innerHTML = `<p class="text-green-500">${result.message}</p>`;
-                    formContainer.reset();
-                    toggleFields();
-                    handleConsultaSearch();
+                    form.reset();
+                    document.getElementById('ocupantes-container').innerHTML = '';
+                    document.getElementById('veiculos-envolvidos-container').innerHTML = '';
+                    document.getElementById('apreensoes-container').innerHTML = '';
+                    document.getElementById('presos-container').innerHTML = '';
                 } catch (error) {
                     feedback.innerHTML = `<p class="text-red-500">Erro ao guardar: ${error.message}</p>`;
                 }
             });
         }
 
-        // --- PÁGINA DE ANÁLISE ---
-        async function renderAnalisePage() {
-            mainContent.innerHTML = `
-                <div class="page-header"><h1 class="text-3xl font-bold text-gray-800">📊 Dashboard de Análise</h1></div>
-                <div class="container-content space-y-8">
-                    <div class="data-card">
-                        <h3 class="text-xl font-semibold">🔎 Filtro</h3>
-                        <div class="mt-4">
-                            <label for="local-entrega-select" class="block text-gray-700">Filtre por Local de Entrega:</label>
-                            <select id="local-entrega-select" multiple class="mt-1 block w-full rounded-lg border-gray-300 h-32"></select>
-                            <button id="analise-btn" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Analisar</button>
-                        </div>
-                    </div>
-                    <div id="charts-container" class="space-y-8"></div>
-                </div>`;
-            
-            try {
-                const select = document.getElementById('local-entrega-select');
-                const { locais } = await (await fetch('/api/analise/filtros')).json();
-                locais.forEach(local => select.add(new Option(local, local)));
-            } catch (error) {
-                document.getElementById('charts-container').innerHTML = `<p class="text-red-500">Falha ao carregar filtros.</p>`;
-            }
-            document.getElementById('analise-btn').addEventListener('click', handleAnaliseSearch);
-            handleAnaliseSearch(); 
-        }
-
-        async function handleAnaliseSearch() {
-            const container = document.getElementById('charts-container');
-            showLoader(container);
-            const selectedLocais = Array.from(document.getElementById('local-entrega-select').selectedOptions).map(opt => opt.value);
-            const query = new URLSearchParams(selectedLocais.map(l => ['locais', l])).toString();
-
-            try {
-                const data = await (await fetch(`/api/analise?${query}`)).json();
-                if (data.error) throw new Error(data.error);
-                displayAnaliseCharts(data, container);
-            } catch (error) {
-                container.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-            }
-        }
-
-        function displayAnaliseCharts(data, container) {
-            container.innerHTML = `
-                <div class="data-card">
-                    <h3 class="text-xl font-semibold">📈 Análise de IDA</h3>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-                        <div id="ida-municipio"></div><div id="ida-rodovia"></div><div id="ida-hora"></div><div id="ida-dia_semana"></div>
-                    </div>
-                </div>
-                <div class="data-card">
-                    <h3 class="text-xl font-semibold">📉 Análise de VOLTA</h3>
-                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-                        <div id="volta-municipio"></div><div id="volta-rodovia"></div><div id="volta-hora"></div><div id="volta-dia_semana"></div>
-                    </div>
-                </div>
-            `;
-            const plotConfig = { responsive: true, displaylogo: false };
-            const plotData = (divId, chartData, title) => {
-                if (chartData?.labels?.length > 0) {
-                    Plotly.newPlot(divId, [{ x: chartData.labels, y: chartData.data, type: 'bar' }], { title }, plotConfig);
-                } else {
-                    document.getElementById(divId).innerHTML = `<p class="text-center text-gray-500 p-4">Sem dados para "${title}"</p>`;
-                }
-            };
-            plotData('ida-municipio', data.ida.municipio, 'Top Municípios (Ida)');
-            plotData('ida-rodovia', data.ida.rodovia, 'Top Autoestradas (Ida)');
-            plotData('ida-hora', data.ida.hora, 'Passagens por Hora (Ida)');
-            plotData('ida-dia_semana', data.ida.dia_semana, 'Passagens por Dia (Ida)');
-            plotData('volta-municipio', data.volta.municipio, 'Top Municípios (Volta)');
-            plotData('volta-rodovia', data.volta.rodovia, 'Top Autoestradas (Volta)');
-            plotData('volta-hora', data.volta.hora, 'Passagens por Hora (Volta)');
-            plotData('volta-dia_semana', data.volta.dia_semana, 'Passagens por Dia (Volta)');
-        }
-
         // --- INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
             btnConsulta.addEventListener('click', () => renderPage('consulta'));
-            btnAnalise.addEventListener('click', () => renderPage('analise'));
+            btnNovaOcorrencia.addEventListener('click', () => renderPage('nova-ocorrencia'));
             document.getElementById('modal-save-btn').addEventListener('click', handleModalSave);
             renderPage('consulta');
         });
     </script>
 </body>
 </html>
-
