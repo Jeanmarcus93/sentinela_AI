@@ -8,14 +8,34 @@
 </div>
 <div class="container-content">
     <div id="analise-filtros" class="mb-8 p-4 bg-gray-50 rounded-lg grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        
+        <!-- NOVO Dropdown para Locais de Entrega -->
         <div>
-            <label for="analise-locais" class="block text-sm font-medium text-gray-700">Locais de Entrega</label>
-            <select id="analise-locais" multiple class="mt-1 block w-full border-gray-300 rounded-lg h-32"></select>
+            <label class="block text-sm font-medium text-gray-700">Locais de Entrega</label>
+            <div class="custom-select-container mt-1">
+                <button type="button" class="custom-select-button" data-target="analise-locais-options">
+                    <span class="selected-items-text">Selecione os locais...</span>
+                </button>
+                <div id="analise-locais-options" class="custom-select-options">
+                    <!-- As checkboxes serão inseridas aqui pelo JavaScript -->
+                </div>
+            </div>
         </div>
+
+        <!-- NOVO Dropdown para Tipos de Apreensões -->
         <div>
-            <label for="analise-apreensoes" class="block text-sm font-medium text-gray-700">Tipos de Apreensões</label>
-            <select id="analise-apreensoes" multiple class="mt-1 block w-full border-gray-300 rounded-lg h-32"></select>
+            <label class="block text-sm font-medium text-gray-700">Tipos de Apreensões</label>
+            <div class="custom-select-container mt-1">
+                <button type="button" class="custom-select-button" data-target="analise-apreensoes-options">
+                     <span class="selected-items-text">Selecione os tipos...</span>
+                </button>
+                <div id="analise-apreensoes-options" class="custom-select-options">
+                    <!-- As checkboxes serão inseridas aqui pelo JavaScript -->
+                </div>
+            </div>
         </div>
+
+        <!-- Outros filtros permanecem iguais -->
         <div>
             <label for="analise-placa" class="block text-sm font-medium text-gray-700">Placa Específica</label>
             <input type="text" id="analise-placa" class="mt-1 block w-full border-gray-300 rounded-lg uppercase" placeholder="ABC1234">
@@ -37,3 +57,8 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analise.js') }}"></script>
+{% endblock %}
+

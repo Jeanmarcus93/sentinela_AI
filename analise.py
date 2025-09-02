@@ -13,6 +13,7 @@ analise_bp = Blueprint('analise_bp', __name__)
 # --- Rota para renderizar a página de Análise ---
 @analise_bp.route('/analise')
 def analise():
+    """Renderiza o template da página de Análise."""
     return render_template('analise.html')
 
 @analise_bp.route('/api/analise/filtros')
@@ -21,11 +22,11 @@ def api_analise_filtros():
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Locais de entrega
+                # Busca locais de entrega distintos para o filtro
                 cur.execute("SELECT DISTINCT relato FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato IS NOT NULL ORDER BY 1;")
                 locais = [row[0] for row in cur.fetchall()]
                 
-                # Tipos de apreensões da nova tabela
+                # Busca todos os tipos possíveis do enum de apreensões para o filtro
                 cur.execute("SELECT unnest(enum_range(NULL::tipo_apreensao_enum))::text ORDER BY 1;")
                 apreensoes = [row[0] for row in cur.fetchall()]
                 
@@ -36,7 +37,8 @@ def api_analise_filtros():
 
 @analise_bp.route('/api/analise')
 def api_analise_dados():
-    """Endpoint principal que gera todos os dados de análise e inteligência."""
+    """Endpoint principal que gera todos os dados de análise e inteligência com base nos filtros fornecidos."""
+    # Coleta os parâmetros da URL
     locais_selecionados = request.args.getlist('locais')
     apreensoes_selecionadas = request.args.getlist('apreensoes')
     placa = request.args.get('placa', None)
@@ -46,7 +48,7 @@ def api_analise_dados():
     engine = get_engine()
     
     try:
-        # ---- Construção da Cláusula WHERE Dinâmica para veiculo_id ----
+        # ---- Construção da Cláusula WHERE Dinâmica para filtrar veiculo_id ----
         params = {}
         subqueries = []
 
@@ -55,15 +57,17 @@ def api_analise_dados():
             params['locais'] = locais_selecionados
 
         if apreensoes_selecionadas:
-            subqueries.append("SELECT DISTINCT o.veiculo_id FROM ocorrencias o JOIN apreensoes a ON o.id = a.ocorrencia_id WHERE a.tipo = ANY(:apreensoes)")
+            # Converte a coluna enum para texto para permitir a comparação com a lista de strings
+            subqueries.append("SELECT DISTINCT o.veiculo_id FROM ocorrencias o JOIN apreensoes a ON o.id = a.ocorrencia_id WHERE a.tipo::text = ANY(:apreensoes)")
             params['apreensoes'] = apreensoes_selecionadas
         
         veiculo_id_filter = ""
         if subqueries:
+            # Usa INTERSECT para encontrar veículos que correspondem a AMBOS os critérios (locais E apreensões)
             veiculo_id_filter = f"veiculo_id IN ({ ' INTERSECT '.join(subqueries) })"
         
-        # Constrói a cláusula WHERE principal
-        where_clauses = ["1=1"]
+        # Constrói a cláusula WHERE principal para as consultas
+        where_clauses = ["1=1"] # Inicia com uma condição sempre verdadeira
         if veiculo_id_filter:
             where_clauses.append(veiculo_id_filter)
             
@@ -76,20 +80,25 @@ def api_analise_dados():
             params['data_inicio'] = data_inicio
 
         if data_fim:
+            # Inclui o dia inteiro na data de fim
             where_clauses.append("datahora <= :data_fim_inclusive")
             params['data_fim_inclusive'] = f"{data_fim} 23:59:59"
 
         base_where_sql = " AND ".join(where_clauses)
 
-        # --- Análise de Padrões de Passagens (Ida e Volta) ---
+        # --- Análise de Padrões de Passagens ---
         def get_chart_data(table_name, extra_condition=""):
+            """Função auxiliar para buscar e agregar dados para os gráficos de padrões."""
             query = text(f"SELECT municipio, rodovia, EXTRACT(HOUR FROM datahora) AS hora, EXTRACT(DOW FROM datahora) AS dow FROM {table_name} WHERE {base_where_sql} {extra_condition}")
             df = pd.read_sql(query, engine, params=params)
-            if df.empty: return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}}
+            if df.empty: 
+                return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}}
             
+            # Conta a frequência dos 10 principais municípios e rodovias
             df_mun, df_rodo = df['municipio'].value_counts().head(10), df['rodovia'].value_counts().head(10)
             df_hora = df['hora'].astype(int).value_counts().sort_index()
             
+            # Mapeia o dia da semana (número) para o nome abreviado
             dias_map = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
             df['dia_semana'] = df['dow'].map(dias_map)
             df_dow = df['dia_semana'].value_counts().reindex(list(dias_map.values())).dropna()
@@ -114,7 +123,6 @@ def api_analise_dados():
 
         # ================== SEÇÃO DE INTELIGÊNCIA ==================
         # --- Inteligência de Rotas Comuns ---
-        # A cláusula WHERE já filtra os veiculos_id corretos
         query_rotas = text(f"""
             WITH viagens_ilicitas AS (
                 SELECT DISTINCT ON (veiculo_id) veiculo_id, datahora, municipio AS municipio_partida
@@ -165,3 +173,4 @@ def api_analise_dados():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Não foi possível gerar os dados de análise."}), 500
+
