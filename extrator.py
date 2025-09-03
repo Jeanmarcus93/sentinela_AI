@@ -5,7 +5,9 @@ from typing import Dict, List
 import fitz  # PyMuPDF
 import psycopg2
 from psycopg2.extras import execute_values
-from config import DB_CONFIG, criar_tabelas
+from database import DB_CONFIG_TESTE as DB_CONFIG
+from config import criar_tabelas
+
 
 
 # ---------- Funções utilitárias ----------

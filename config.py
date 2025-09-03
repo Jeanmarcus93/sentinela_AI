@@ -1,5 +1,5 @@
 import psycopg2
-from database import DB_CONFIG
+from database import DB_CONFIG_TESTE as DB_CONFIG
 
 # 2. Definição da função para criar as tabelas
 def criar_tabelas():
@@ -82,6 +82,17 @@ def criar_tabelas():
             );
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS relato_extracao (
+                id SERIAL PRIMARY KEY,
+                relato TEXT NOT NULL,
+                classe_risco VARCHAR(20),
+                pontuacao NUMERIC,
+                top_palavras JSONB,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+                    
         # Tipos ENUM e tabela de apreensões (para o app)
         cur.execute("""
             DO $$ BEGIN

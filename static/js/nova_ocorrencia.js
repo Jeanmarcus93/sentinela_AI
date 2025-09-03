@@ -3,6 +3,115 @@
 // ===============================================
 
 /**
+ * Converte uma string de data e hora no formato brasileiro (dd/mm/aaaa hh:mm)
+ * para o formato ISO (aaaa-mm-ddThh:mm) usado por inputs datetime-local e APIs.
+ * @param {string} dataHoraString - A data e hora no formato "dd/mm/aaaa hh:mm".
+ * @returns {string|null} A data no formato ISO ou null se o formato for inválido.
+ */
+function converterDataHoraBrasileiraParaISO(dataHoraString) {
+    if (!dataHoraString) return null;
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/;
+    const parts = dataHoraString.match(regex);
+    if (!parts) return null;
+    const [, dia, mes, ano, hora, minuto] = parts;
+    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+}
+
+/**
+ * Adiciona um grupo de campos dinâmicos a um container na tela.
+ * @param {string} type - O tipo de campo a ser adicionado ('ocupantes', 'apreensoes', 'presos', 'veiculos').
+ */
+function addDynamicField(type) {
+    let container, newFieldHTML, groupClass;
+
+    const createRemoveButton = () => {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.innerText = 'Remover';
+        removeBtn.className = 'mt-1 px-3 py-1 bg-red-500 text-white rounded-lg text-sm';
+        removeBtn.onclick = (e) => e.target.closest('.dynamic-field-group').remove();
+        return removeBtn;
+    };
+
+    switch (type) {
+        case 'apreensoes':
+            container = document.getElementById('apreensoes-container');
+            groupClass = 'apreensao-campo-group';
+            newFieldHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-sm">Tipo de Apreensão</label>
+                        <select name="apreensao-tipo" class="mt-1 block w-full rounded-lg border-gray-300">
+                            <option value="Maconha">Maconha</option>
+                            <option value="Skunk">Skunk</option>
+                            <option value="Cocaina">Cocaína</option>
+                            <option value="Crack">Crack</option>
+                            <option value="Sintéticos">Sintéticos</option>
+                            <option value="Arma">Arma</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm">Quantidade</label>
+                        <input type="number" step="any" name="apreensao-qtd" placeholder="Ex: 10.5" class="mt-1 block w-full rounded-lg border-gray-300" />
+                    </div>
+                    <div>
+                        <label class="text-sm">Unidade</label>
+                        <select name="apreensao-unidade" class="mt-1 block w-full rounded-lg border-gray-300">
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="un">un</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'ocupantes':
+        case 'presos':
+            container = type === 'ocupantes' ? document.getElementById('ocupantes-container') : document.getElementById('presos-container');
+            groupClass = type === 'ocupantes' ? 'ocupante-campo-group' : 'preso-campo-group';
+            newFieldHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-sm">Nome</label>
+                        <input type="text" name="${type.slice(0, -1)}-nome" placeholder="Nome Completo" class="mt-1 block w-full rounded-lg border-gray-300" />
+                    </div>
+                    <div>
+                        <label class="text-sm">CPF/CNPJ</label>
+                        <input type="text" name="${type.slice(0, -1)}-cpf" placeholder="CPF ou CNPJ" class="mt-1 block w-full rounded-lg border-gray-300" />
+                    </div>
+                </div>
+            `;
+            break;
+        case 'veiculos':
+            container = document.getElementById('veiculos-envolvidos-container');
+            groupClass = 'veiculo-campo-group';
+            newFieldHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-sm">Placa</label>
+                        <input type="text" name="veiculo-placa" placeholder="Placa do Veículo" class="mt-1 block w-full rounded-lg border-gray-300" />
+                    </div>
+                    <div>
+                        <label class="text-sm">Modelo</label>
+                        <input type="text" name="veiculo-modelo" placeholder="Modelo do Veículo" class="mt-1 block w-full rounded-lg border-gray-300" />
+                    </div>
+                </div>
+            `;
+            break;
+        default:
+            return;
+    }
+
+    if (container) {
+        const div = document.createElement('div');
+        div.className = `p-2 border rounded-lg bg-gray-50 dynamic-field-group ${groupClass}`;
+        div.innerHTML = newFieldHTML;
+        div.appendChild(createRemoveButton());
+        container.appendChild(div);
+    }
+}
+
+/**
  * Busca os dados de um veículo pela placa e, se encontrado, monta o formulário de ocorrência.
  * @param {string} placa - A placa do veículo a ser buscado.
  */
@@ -13,8 +122,6 @@ async function handleNovaOcorrenciaSearch(placa) {
         return;
     }
     
-    showLoader(formContainer);
-
     try {
         const response = await fetch(`/api/consulta_placa/${placa}`);
         const data = await response.json();
@@ -58,13 +165,15 @@ async function setupOcorrenciaForm(veiculoId) {
                 <option value="Local de Entrega">Local de Entrega da Droga</option>
             </select>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label for="data-inicio" class="block text-gray-700">Data Inicial</label><input type="date" id="data-inicio" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
-            <div><label for="hora-inicio" class="block text-gray-700">Hora Inicial</label><input type="time" id="hora-inicio" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+        
+        <div>
+            <label for="datahora-inicio" class="block text-gray-700">Data e Hora Inicial</label>
+            <input type="text" id="datahora-inicio" placeholder="dd/mm/aaaa hh:mm" class="date-input mt-1 block w-full rounded-lg border-gray-300" />
         </div>
-        <div id="data-fim-group" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-            <div><label for="data-fim" class="block text-gray-700">Data Final</label><input type="date" id="data-fim" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
-            <div><label for="hora-fim" class="block text-gray-700">Hora Final</label><input type="time" id="hora-fim" class="date-input mt-1 block w-full rounded-lg border-gray-300" /></div>
+
+        <div id="data-fim-group" class="hidden">
+            <label for="datahora-fim" class="block text-gray-700">Data e Hora Final</label>
+            <input type="text" id="datahora-fim" placeholder="dd/mm/aaaa hh:mm" class="date-input mt-1 block w-full rounded-lg border-gray-300" />
         </div>
         
         <div id="cidade-entrega-group" class="hidden">
@@ -79,6 +188,13 @@ async function setupOcorrenciaForm(veiculoId) {
             <div id="ocupantes-container" class="space-y-4"></div>
             <button type="button" id="add-ocupante-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Ocupante</button>
         </div>
+
+        <!-- Veículos Envolvidos agora é um grupo independente -->
+        <div id="veiculos-envolvidos-group" class="hidden space-y-4">
+             <label class="block text-gray-700 font-semibold mb-2">Veículos Envolvidos</label>
+             <div id="veiculos-envolvidos-container" class="space-y-4"></div>
+             <button type="button" id="add-veiculo-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Veículo</button>
+        </div>
         
         <div id="bop-group" class="hidden space-y-4">
             <div>
@@ -91,11 +207,6 @@ async function setupOcorrenciaForm(veiculoId) {
                 <div id="presos-container" class="space-y-4"></div>
                 <button type="button" id="add-preso-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Preso</button>
             </div>
-            <div>
-                 <label class="block text-gray-700 font-semibold mb-2">Veículos Envolvidos</label>
-                 <div id="veiculos-envolvidos-container" class="space-y-4"></div>
-                 <button type="button" id="add-veiculo-btn" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Veículo</button>
-            </div>
         </div>
 
         <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Guardar Ocorrência</button>
@@ -107,9 +218,11 @@ async function setupOcorrenciaForm(veiculoId) {
     const ocupantesGroup = document.getElementById('ocupantes-group');
     const relatoGroup = document.getElementById('relato-group');
     const cidadeEntregaGroup = document.getElementById('cidade-entrega-group');
+    const bopGroup = document.getElementById('bop-group');
+    const veiculosEnvolvidosGroup = document.getElementById('veiculos-envolvidos-group');
+
     const ocupantesContainer = document.getElementById('ocupantes-container');
     const addOcupanteBtn = document.getElementById('add-ocupante-btn');
-    const bopGroup = document.getElementById('bop-group');
     const veiculosEnvolvidosContainer = document.getElementById('veiculos-envolvidos-container');
     const addVeiculoBtn = document.getElementById('add-veiculo-btn');
     const apreensoesContainer = document.getElementById('apreensoes-container');
@@ -128,6 +241,8 @@ async function setupOcorrenciaForm(veiculoId) {
         relatoGroup.classList.toggle('hidden', isEntrega);
         ocupantesGroup.classList.toggle('hidden', !isAbordagem);
         bopGroup.classList.toggle('hidden', !isBOP);
+        // Exibe o grupo de veículos se for Abordagem OU BOP
+        veiculosEnvolvidosGroup.classList.toggle('hidden', !isAbordagem && !isBOP);
         
         ocupantesContainer.innerHTML = '';
         apreensoesContainer.innerHTML = '';
@@ -156,17 +271,18 @@ async function setupOcorrenciaForm(veiculoId) {
     addApreensaoBtn.addEventListener('click', addApreensaoField);
     addPresoBtn.addEventListener('click', addPresoField);
     
-    toggleFields(); // Call initially
+    toggleFields(); // Chamada inicial para configurar os campos
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const feedback = document.getElementById('form-feedback');
         feedback.innerHTML = '';
 
-        const dataInicio = document.getElementById('data-inicio').value;
-        const horaInicio = document.getElementById('hora-inicio').value;
-        if (!dataInicio || !horaInicio) {
-            feedback.innerHTML = '<p class="text-red-500">Data e Hora inicial são obrigatórias.</p>';
+        const datahoraInicioInput = document.getElementById('datahora-inicio').value;
+        const datahoraInicioISO = converterDataHoraBrasileiraParaISO(datahoraInicioInput);
+
+        if (!datahoraInicioISO) {
+            feedback.innerHTML = '<p class="text-red-500">Data e Hora inicial são obrigatórias e devem estar no formato dd/mm/aaaa hh:mm.</p>';
             return;
         }
         
@@ -190,6 +306,13 @@ async function setupOcorrenciaForm(veiculoId) {
                 cpf_cnpj: group.querySelector('input[name="ocupante-cpf"]').value
             })).filter(o => o.nome || o.cpf_cnpj);
              ocupantes = JSON.stringify(ocupantesList);
+
+             const veiculosList = Array.from(document.querySelectorAll('.veiculo-campo-group')).map(group => ({
+                placa: group.querySelector('input[name="veiculo-placa"]').value,
+                modelo: group.querySelector('input[name="veiculo-modelo"]').value
+            })).filter(v => v.placa || v.modelo);
+             veiculos = JSON.stringify(veiculosList);
+
              relatoFinal = document.getElementById('relato').value;
         } else if (tipoSelecionado === 'BOP') {
             const apreensoesList = Array.from(document.querySelectorAll('.apreensao-campo-group')).map(group => ({
@@ -210,13 +333,14 @@ async function setupOcorrenciaForm(veiculoId) {
                 modelo: group.querySelector('input[name="veiculo-modelo"]').value
             })).filter(v => v.placa || v.modelo);
              veiculos = JSON.stringify(veiculosList);
+             
             relatoFinal = document.getElementById('relato').value;
         }
 
         const payload = {
             veiculo_id: veiculoId,
             tipo: tipoSelecionado,
-            datahora: `${dataInicio}T${horaInicio}`,
+            datahora: datahoraInicioISO,
             datahora_fim: null,
             relato: relatoFinal,
             ocupantes: ocupantes,
@@ -226,9 +350,15 @@ async function setupOcorrenciaForm(veiculoId) {
         };
         
         if (tipoSelecionado === 'Local de Entrega') {
-            const dataFim = document.getElementById('data-fim').value;
-            const horaFim = document.getElementById('hora-fim').value;
-            if(dataFim && horaFim) payload.datahora_fim = `${dataFim}T${horaFim}`;
+            const datahoraFimInput = document.getElementById('datahora-fim').value;
+            if (datahoraFimInput) {
+                const datahoraFimISO = converterDataHoraBrasileiraParaISO(datahoraFimInput);
+                if(!datahoraFimISO) {
+                    feedback.innerHTML = '<p class="text-red-500">O formato da Data e Hora Final é inválido. Use dd/mm/aaaa hh:mm.</p>';
+                    return;
+                }
+                payload.datahora_fim = datahoraFimISO;
+            }
         }
         
         try {

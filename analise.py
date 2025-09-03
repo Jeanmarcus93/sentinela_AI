@@ -1,20 +1,22 @@
 # analise.py
-from flask import Blueprint, jsonify, request, render_template
+import re
+import json
 import pandas as pd
 from sqlalchemy import text
-import json
-import re
-
+from semantic_local import analyze_text
+from database import get_db_connection
+from flask import Blueprint, jsonify, request, render_template
+from analisar_placa import analisar_placa_json
 from database import get_engine, get_db_connection
 
 # Cria um Blueprint para as rotas de análise
 analise_bp = Blueprint('analise_bp', __name__)
 
 # --- Rota para renderizar a página de Análise ---
-@analise_bp.route('/analise')
-def analise():
-    """Renderiza o template da página de Análise."""
-    return render_template('analise.html')
+#@analise_bp.route('/analise')
+#def analise():
+#    """Renderiza o template da página de Análise."""
+#    return render_template('analise.html')
 
 @analise_bp.route('/api/analise/filtros')
 def api_analise_filtros():
@@ -209,3 +211,51 @@ def api_analise_dados():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Não foi possível gerar os dados de análise."}), 500
+    
+    # --- ADICIONE NO TOPO ---
+from semantic_local import analyze_text
+from database import get_db_connection
+
+# --- NOVO: interpretar 1 relato ---
+@analise_bp.route('/api/analise_relato', methods=['POST'])
+def api_analise_relato():
+    data = request.get_json(force=True) or {}
+    relato = data.get("relato", "") or ""
+    resultado = analyze_text(relato)
+
+    # persiste na tabela 'relato_extracao' (prevista no seu config):contentReference[oaicite:9]{index=9}
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO relato_extracao (relato, classe_risco, pontuacao, top_palavras)
+                    VALUES (%s, %s, %s, %s)
+                """, (relato, resultado["classe"], resultado["pontuacao"], json.dumps(resultado["keywords"])))
+                conn.commit()
+    except Exception as e:
+        # não trava a API por erro de log
+        print("WARN: falha ao salvar em relato_extracao:", e)
+
+    return jsonify(resultado)
+
+# --- NOVO: interpretar um lote de relatos ---
+@analise_bp.route('/api/analise_relato/lote', methods=['POST'])
+def api_analise_relato_lote():
+    data = request.get_json(force=True) or {}
+    relatos = data.get("relatos", [])
+    resultados = []
+    for r in relatos:
+        res = analyze_text(r or "")
+        resultados.append(res)
+    return jsonify({"resultados": resultados})
+
+@analise_bp.route('/api/analise_placa/<string:placa>')
+def api_analise_placa(placa):
+    try:
+        resultado = analisar_placa_json(placa.upper())
+        return jsonify(resultado)
+    except FileNotFoundError:
+        return jsonify({"error": "Modelos de ML não encontrados. Rode 'train_routes.py' e 'train_semantic.py' primeiro."}), 404
+    except Exception as e:
+        print(f"ERRO em api_analise_placa: {e}")
+        return jsonify({"error": "Ocorreu um erro interno ao analisar a placa."}), 500

@@ -57,7 +57,8 @@ function openEditModal(type, dataString) {
                 </div>
             `;
         } else if (data.tipo === 'Abordagem') {
-             const ocupantes = data.ocupantes ? JSON.parse(data.ocupantes) : [];
+             // CORREÇÃO: Os dados já vêm como objeto/array, não precisam de JSON.parse
+             const ocupantes = data.ocupantes || [];
              formHtml += `
                  <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
                  <div id="ocupantes-container" class="space-y-4">
@@ -76,8 +77,9 @@ function openEditModal(type, dataString) {
              `;
         } else if (data.tipo === 'BOP') {
             const apreensoes = Array.isArray(data.apreensoes) ? data.apreensoes : [];
-            const presos = data.presos ? JSON.parse(data.presos) : [];
-            const veiculos = data.veiculos ? JSON.parse(data.veiculos) : [];
+            // CORREÇÃO: Os dados já vêm como objeto/array, não precisam de JSON.parse
+            const presos = data.presos || [];
+            const veiculos = data.veiculos || [];
             
             formHtml += `
                 <div><label class="block">Relato</label><textarea name="relato" class="modal-input h-24">${data.relato || ''}</textarea></div>
@@ -116,7 +118,7 @@ function openEditModal(type, dataString) {
                 </div>
                 <button type="button" onclick="addDynamicField('apreensoes')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Apreensão</button>
 
-                <div id="presos-container" class="space-y-4">
+                <div id="presos-container" class="mt-4 space-y-4">
                     <label class="block text-gray-700 font-semibold mb-2">Presos</label>
                     ${presos.map(p => `
                         <div class="preso-campo-group border-b pb-4 flex items-center gap-2">
@@ -130,7 +132,7 @@ function openEditModal(type, dataString) {
                 </div>
                 <button type="button" onclick="addDynamicField('presos')" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Adicionar Preso</button>
 
-                <div id="veiculos-envolvidos-container" class="space-y-4">
+                <div id="veiculos-envolvidos-container" class="mt-4 space-y-4">
                     <label class="block text-gray-700 font-semibold mb-2">Veículos Envolvidos</label>
                     ${veiculos.map(v => `
                         <div class="veiculo-campo-group border-b pb-4 flex items-center gap-2">
@@ -175,7 +177,9 @@ async function handleModalSave() {
         };
     } else if (type === 'ocorrencia') {
         const tipo = form.querySelector('input[name="tipo"]').value;
-        const relato = form.querySelector('textarea[name="relato"]').value;
+        const relatoElement = form.querySelector('textarea[name="relato"]');
+        const relato = relatoElement ? relatoElement.value : null;
+
 
         const dataInicio = form.querySelector('input[name="datahora_date"]').value;
         const horaInicio = form.querySelector('input[name="datahora_time"]').value;
@@ -210,11 +214,13 @@ async function handleModalSave() {
                  unidade: group.querySelector('select[name="apreensao-unidade"]').value
              })).filter(p => p.tipo && p.quantidade);
              payloadData.apreensoes = JSON.stringify(apreensoesList);
+             
              const presosList = Array.from(form.querySelectorAll('.preso-campo-group')).map(group => ({
                  nome: group.querySelector('input[name="preso-nome"]').value,
                  cpf_cnpj: group.querySelector('input[name="preso-cpf"]').value
              })).filter(p => p.nome || p.cpf_cnpj);
              payloadData.presos = JSON.stringify(presosList);
+             
              const veiculosList = Array.from(form.querySelectorAll('.veiculo-campo-group')).map(group => ({
                  placa: group.querySelector('input[name="veiculo-placa"]').value,
                  modelo: group.querySelector('input[name="veiculo-modelo"]').value
@@ -251,7 +257,9 @@ function addDynamicField(containerId) {
     const container = document.getElementById(containerId + '-container');
     if (!container) return;
     const newGroup = document.createElement('div');
-    newGroup.className = 'border-b pb-4 flex items-center gap-2';
+    
+    let groupClass = `${containerId.slice(0, -1)}-campo-group`;
+    newGroup.className = `${groupClass} border-b pb-4 flex items-center gap-2`;
 
     if (containerId === 'ocupantes' || containerId === 'presos') {
         newGroup.innerHTML = `
@@ -262,7 +270,6 @@ function addDynamicField(containerId) {
             <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
         `;
     } else if (containerId === 'veiculos') {
-        newGroup.className = 'veiculo-campo-group border-b pb-4 flex items-center gap-2';
         newGroup.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 flex-grow">
                 <div><label class="block text-sm text-gray-600">Placa</label><input type="text" name="veiculo-placa" class="w-full px-2 py-1 border rounded-lg" placeholder="Placa do veículo"></div>
@@ -271,7 +278,6 @@ function addDynamicField(containerId) {
             <button type="button" onclick="this.parentNode.remove()" class="text-red-500 hover:text-red-700 font-bold text-lg">X</button>
          `;
     } else if (containerId === 'apreensoes') {
-        newGroup.className = 'apreensao-campo-group border-b pb-4 flex items-center gap-2';
         newGroup.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2 flex-grow">
                 <div>
@@ -341,7 +347,11 @@ document.addEventListener('click', function(e) {
             range.forEach(cb => {
                 if (cb.checked !== checkbox.checked) {
                     cb.checked = checkbox.checked;
-                    updatePassagem(cb, cb.dataset.id, column);
+                    // A função updatePassagem não existe globalmente, deve ser tratada dentro de consulta.js
+                    // Dispara um evento para ser capturado por consulta.js se necessário
+                    document.dispatchEvent(new CustomEvent('passagem-updated', { detail: {
+                        checkbox: cb, id: cb.dataset.id, column: column
+                    }}));
                 }
             });
         }
@@ -361,13 +371,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = {
         'nav-consulta': ['/', '/consulta'],
         'nav-nova-ocorrencia': ['/nova_ocorrencia'],
-        'nav-analise': ['/analise']
+        'nav-analise': ['/analise'],
+        'nav-analise-ia': ['/analise_IA']
     };
 
     for (const [navId, paths] of Object.entries(navLinks)) {
         const navElement = document.getElementById(navId);
-        if (navElement && paths.some(path => currentPath.endsWith(path))) {
+        if (navElement && paths.some(path => currentPath.endsWith(path) || (path === '/' && currentPath === '/'))) {
             navElement.classList.replace('inactive', 'active');
+        } else if (navElement) {
+            navElement.classList.replace('active', 'inactive');
         }
     }
 

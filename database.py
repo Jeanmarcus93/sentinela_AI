@@ -11,6 +11,14 @@ DB_CONFIG = {
     "password": "Jmkjmk.00" # ATENÇÃO: Troque pela sua senha
 }
 
+DB_CONFIG_TESTE = {  # sandbox
+    "dbname": "sentinela_teste",
+    "user": "postgres",
+    "password": "Jmkjmk.00",
+    "host": "localhost",
+    "port": "5432"
+}
+
 def get_engine():
     """Cria e retorna uma engine do SQLAlchemy para uso com Pandas."""
     port = DB_CONFIG.get('port', 5432)

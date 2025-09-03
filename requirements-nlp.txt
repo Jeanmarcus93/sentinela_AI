@@ -1,0 +1,19 @@
+# requirements-nlp.txt
+
+# NLP core
+spacy==3.7.4
+yake==0.4.8
+
+# Sentence embeddings
+sentence-transformers==3.0.1
+
+# Machine Learning
+scikit-learn==1.5.1
+joblib==1.4.2
+numpy
+pandas
+
+# Tópicos (opcional, para análises mais avançadas)
+bertopic==0.16.4
+umap-learn
+hdbscan
