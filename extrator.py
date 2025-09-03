@@ -5,7 +5,6 @@ from typing import Dict, List
 import fitz  # PyMuPDF
 import psycopg2
 from psycopg2.extras import execute_values
-
 from config import DB_CONFIG, criar_tabelas
 
 
@@ -145,48 +144,58 @@ def extrair_dados(texto: str, placa: str) -> Dict[str, object]:
     return dados
 
 
-def extrair_passagens(texto: str, placa: str) -> List[Dict[str, object]]:
-    """Extrai passagens do veículo no relatório (com datahora unificada)."""
+def extrair_passagens(texto: str) -> List[Dict[str, object]]:
+    """
+    Extrai passagens do veículo no relatório, reutilizando o último
+    endereço válido para passagens subsequentes sem endereço explícito.
+    """
     passagens = []
     linhas = texto.split("\n")
-    for idx, linha in enumerate(linhas):
-        if linha.startswith("RS - "):
-            partes = [p.strip() for p in linha.split(" - ", 2)]
-            if len(partes) >= 3:
-                estado, municipio, rodovia = partes[0], partes[1], partes[2]
-            else:
-                continue
-            datahora_obj = None
-            for j in range(idx + 1, min(idx + 10, len(linhas))):
-                match = re.search(r"(\d{2}/\d{2}/\d{4})\s*(\d{2}:\d{2}:\d{2})", linhas[j])
-                if match:
-                    try:
-                        datahora_obj = datetime.strptime(
-                            f"{match.group(1)} {match.group(2)}", "%d/%m/%Y %H:%M:%S"
-                        )
-                    except ValueError:
-                        datahora_obj = None
-                    break
-            if datahora_obj:
+    
+    ultimo_local_valido = None
+
+    for linha in linhas:
+        linha = linha.strip()
+        if not linha:
+            continue
+
+        partes_local = [p.strip() for p in linha.split(" - ", 2)]
+        if len(partes_local) >= 3 and len(partes_local[0]) == 2:
+            ultimo_local_valido = {
+                "estado": partes_local[0],
+                "municipio": partes_local[1],
+                "rodovia": partes_local[2],
+            }
+            continue
+
+        match = re.search(r"(\d{2}/\d{2}/\d{4})\s*(\d{2}:\d{2}:\d{2})", linha)
+
+        if match and ultimo_local_valido:
+            try:
+                datahora_obj = datetime.strptime(
+                    f"{match.group(1)} {match.group(2)}", "%d/%m/%Y %H:%M:%S"
+                )
                 passagens.append({
-                    "placa": placa,
-                    "estado": estado,
-                    "municipio": municipio,
-                    "rodovia": rodovia,
+                    "estado": ultimo_local_valido["estado"],
+                    "municipio": ultimo_local_valido["municipio"],
+                    "rodovia": ultimo_local_valido["rodovia"],
                     "datahora": datahora_obj,
                 })
+            except ValueError:
+                continue
+                
     return passagens
-
 
 # ---------- Inserção no banco ----------
 
 def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) -> None:
-    """Insere veículo, pessoas e passagens no banco (com relação veículo-pessoa)."""
-    conn = psycopg2.connect(**DB_CONFIG)
+    """Insere veículo, pessoas e passagens no banco (usando veiculo_id para relacionar)."""
+    conn = None
     try:
+        conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
 
-        # --- Inserir veículo ---
+        # --- Passo 1: Inserir ou atualizar o veículo e obter o seu ID ---
         cur.execute("""
             INSERT INTO veiculos (placa, marca_modelo, tipo, ano_modelo, cor,
                                   local_emplacamento, transferencia_recente, comunicacao_venda,
@@ -209,13 +218,11 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
             dados["veiculo"]["transferencia_recente"], dados["veiculo"]["comunicacao_venda"],
             dados["veiculo"]["crime_prf"], dados["veiculo"]["abordagem_prf"]
         ))
-        veiculo_id = cur.fetchone()[0] if cur.rowcount > 0 else None
+        
+        # Garante que temos o ID do veículo, seja da inserção ou de um registro existente
+        veiculo_id = cur.fetchone()[0]
 
-        if not veiculo_id:
-            cur.execute("SELECT id FROM veiculos WHERE placa = %s", (dados["veiculo"]["placa"],))
-            veiculo_id = cur.fetchone()[0]
-
-        # --- Inserir pessoas (ligadas ao veículo) ---
+        # --- Passo 2: Inserir pessoas, associando-as com o veiculo_id obtido ---
         for papel in ["proprietario", "condutor", "possuidor"]:
             pessoa = dados[papel]
             if pessoa["nome"] and pessoa["cpf_cnpj"]:
@@ -240,7 +247,7 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
                     pessoa["proprietario"], pessoa["condutor"], pessoa["possuidor"]
                 ))
 
-        # --- Inserir passagens ---
+        # --- Passo 3: Inserir passagens, também associando com o mesmo veiculo_id ---
         if passagens:
             registros = [
                 (veiculo_id, p["estado"], p["municipio"], p["rodovia"], p["datahora"])
@@ -253,12 +260,13 @@ def inserir_dados(dados: Dict[str, object], passagens: List[Dict[str, object]]) 
             """, registros)
 
         conn.commit()
+    except psycopg2.Error as e:
+        print(f"❌ Erro de banco de dados: {e}")
+        if conn:
+            conn.rollback() # Desfaz a transação em caso de erro
     finally:
-        try:
-            cur.close()
-        except Exception:
-            pass
-        conn.close()
+        if conn:
+            conn.close()
 
 
 # ---------- Função principal ----------
@@ -270,16 +278,17 @@ def processar_pdfs(pasta: str = "entrada_pdfs") -> None:
         if arquivo.lower().endswith(".pdf"):
             caminho = os.path.join(pasta, arquivo)
             placa = os.path.splitext(arquivo)[0].upper()
+            
+            print(f"\n⏳ Processando {arquivo}...")
+            
             texto = extrair_texto_pdf(caminho)
             dados = extrair_dados(texto, placa)
-            passagens = extrair_passagens(texto, placa)
+            passagens = extrair_passagens(texto)
 
-            print(f"\n✅ Dados extraídos de {arquivo}:")
-            print(dados)
-            print(f"Passagens encontradas: {len(passagens)}")
+            print(f"✅ Dados extraídos. Passagens encontradas: {len(passagens)}")
 
             inserir_dados(dados, passagens)
-            print("💾 Inserido no banco com sucesso!")
+            print("💾 Dados inseridos no banco com sucesso!")
 
 
 if __name__ == "__main__":

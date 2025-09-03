@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask
-from config import criar_tabelas, atualizar_esquema, finalizar_migracao_apreensoes
+from config import criar_tabelas
 from routes import main_bp
 from analise import analise_bp
 from database import get_db_connection
@@ -83,23 +83,8 @@ def migrar_apreensoes_para_tabela_normalizada():
 # Bloco de execução principal
 if __name__ == '__main__':
     try:
-        # 1. Garante que todas as tabelas, tipos e colunas existam
-        # A função 'criar_tabelas' já cria a nova tabela 'apreensoes'
         criar_tabelas()
-        
-        # 2. Garante que a coluna JSON antiga exista para podermos ler os dados dela
-        atualizar_esquema()
-        
-        # 3. Migra os dados do formato JSON antigo para a nova tabela estruturada
-        migrar_apreensoes_para_tabela_normalizada()
-        
-        # 4. ETAPA FINAL (EXECUTAR APENAS UMA VEZ, DEPOIS DE VERIFICAR A MIGRAÇÃO)
-        # Após confirmar que os dados estão corretos na nova tabela 'apreensoes',
-        # descomente a linha abaixo e rode a aplicação mais uma vez para limpar a coluna antiga.
-        # finalizar_migracao_apreensoes()
-
     except Exception as e:
-        print(f"ERRO CRÍTICO ao conectar ao banco ou preparar as tabelas: {e}")
-        exit()
+        print(f"Erro ao inicializar o banco de dados: {e}")
 
     app.run(debug=True)

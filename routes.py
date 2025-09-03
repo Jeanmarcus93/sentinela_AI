@@ -275,3 +275,48 @@ def api_update_pessoa(pessoa_id):
     except Exception as e:
         print(f"ERRO ao atualizar pessoa: {e}")
         return jsonify({"error": "Erro ao atualizar pessoa."}), 500
+
+@main_bp.route('/api/local_entrega', methods=['POST'])
+def api_add_local_entrega():
+    """Cria uma ocorrência do tipo Local de Entrega, salvando apenas município (NOME - UF) no relato."""
+    data = request.get_json()
+    try:
+        placa = data.get('placa')
+        inicio_iso = data.get('inicio_iso')
+        fim_iso = data.get('fim_iso')
+        municipio = data.get('municipio')  # esperado no formato "NOME - UF"
+
+        if not placa or not inicio_iso or not fim_iso or not municipio:
+            return jsonify({"error": "Campos obrigatórios: placa, inicio_iso, fim_iso, municipio"}), 400
+
+        inicio_dt = datetime.fromisoformat(inicio_iso.replace("Z", "+00:00"))
+        fim_dt = datetime.fromisoformat(fim_iso.replace("Z", "+00:00"))
+
+        if fim_dt < inicio_dt:
+            return jsonify({"error": "Data de fim não pode ser anterior ao início"}), 400
+
+        # O relato será somente o município no formato NOME - UF
+        relato = municipio.strip().upper()
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Obter veiculo_id
+                cur.execute("SELECT id FROM veiculos WHERE placa = %s;", (placa.upper(),))
+                veiculo = cur.fetchone()
+                if not veiculo:
+                    return jsonify({"error": "Veículo não encontrado"}), 404
+                veiculo_id = veiculo[0]
+
+                # Inserir ocorrência
+                cur.execute(
+                    """INSERT INTO ocorrencias (veiculo_id, tipo, datahora, datahora_fim, relato) 
+                       VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                    (veiculo_id, "Local de Entrega", inicio_dt, fim_dt, relato)
+                )
+                ocorrencia_id = cur.fetchone()[0]
+
+        return jsonify({"success": True, "message": "Local de Entrega registrado.", "id": ocorrencia_id}), 201
+    except Exception as e:
+        print(f"ERRO em api_add_local_entrega: {e}")
+        return jsonify({"error": f"Erro ao registrar Local de Entrega: {e}"}), 500
+
