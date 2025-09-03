@@ -182,33 +182,40 @@ function displayAnaliseResults(data, container) {
         </div>
     `;
 
+    // **NOVO**: Adiciona os placeholders para os novos gráficos
     const chartsHtml = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="chart-container md:col-span-2"><h3 class="text-lg">Fluxo de Rotas (Origem / Destino)</h3><div id="chart-sankey" class="flex-grow"></div></div>
+            <div class="chart-container"><h3 class="text-lg">Heatmap de Atividade (Dia vs. Hora)</h3><div id="chart-heatmap-temporal" class="flex-grow"></div></div>
+            <div class="chart-container"><h3 class="text-lg">Mapa de Atividade Geográfica</h3><div id="chart-geo-map" class="flex-grow"></div></div>
+            
+            <div class="chart-container"><h3 class="text-lg">Rotas Mais Comuns</h3><div id="chart-rotas" class="flex-grow"></div></div>
             <div class="chart-container"><h3 class="text-lg">Localizações Mais Comuns (Ida)</h3><div id="chart-ida-locais" class="flex-grow"></div></div>
             <div class="chart-container"><h3 class="text-lg">Rodovias Mais Comuns (Ida)</h3><div id="chart-ida-rodovias" class="flex-grow"></div></div>
-            <div class="chart-container"><h3 class="text-lg">Distribuição por Hora (Ida)</h3><div id="chart-ida-hora" class="flex-grow"></div></div>
-            <div class="chart-container"><h3 class="text-lg">Distribuição por Dia da Semana (Ida)</h3><div id="chart-ida-dia" class="flex-grow"></div></div>
-            <div class="chart-container"><h3 class="text-lg">Rotas Mais Comuns</h3><div id="chart-rotas" class="flex-grow"></div></div>
+            <div class="chart-container"><h3 class="text-lg">Apreensões Mais Frequentes</h3><div id="chart-apreensoes" class="flex-grow"></div></div>
             <div class="chart-container"><h3 class="text-lg">Modelos de Veículos (Viagens Ilícitas)</h3><div id="chart-veiculos" class="flex-grow"></div></div>
             <div class="chart-container"><h3 class="text-lg">Cores de Veículos (Viagens Ilícitas)</h3><div id="chart-cores" class="flex-grow"></div></div>
-            <div class="chart-container"><h3 class="text-lg">Apreensões Mais Frequentes</h3><div id="chart-apreensoes" class="flex-grow"></div></div>
         </div>
     `;
 
     container.innerHTML = kpisHtml + chartsHtml;
 
+    // **NOVO**: Chama as funções para renderizar os novos gráficos
+    if (data.inteligencia.sankey && data.inteligencia.sankey.source && data.inteligencia.sankey.source.length > 0) {
+        renderSankeyDiagram('chart-sankey', data.inteligencia.sankey);
+    }
+     if (data.ida.heatmap_temporal && data.ida.heatmap_temporal.z && data.ida.heatmap_temporal.z.length > 0) {
+        renderTemporalHeatmap('chart-heatmap-temporal', data.ida.heatmap_temporal);
+    }
+    // A função do mapa é chamada, mas precisa de coordenadas para funcionar
+    renderGeoMap('chart-geo-map', data.ida.pontos_geograficos, data.inteligencia.rotas_geograficas);
+    
     // Chama a função para renderizar cada gráfico, verificando se há dados para ele.
     if (data.ida.municipio && data.ida.municipio.labels.length > 0) {
         renderPlotlyChart('chart-ida-locais', data.ida.municipio, 'bar', 'h');
     }
     if (data.ida.rodovia && data.ida.rodovia.labels.length > 0) {
         renderPlotlyChart('chart-ida-rodovias', data.ida.rodovia, 'bar', 'h');
-    }
-    if (data.ida.hora && data.ida.hora.labels.length > 0) {
-        renderPlotlyChart('chart-ida-hora', data.ida.hora, 'bar');
-    }
-    if (data.ida.dia_semana && data.ida.dia_semana.labels.length > 0) {
-        renderPlotlyChart('chart-ida-dia', data.ida.dia_semana, 'bar');
     }
     if (data.inteligencia.rotas && data.inteligencia.rotas.labels.length > 0) {
         renderPlotlyChart('chart-rotas', data.inteligencia.rotas, 'bar', 'h');
@@ -276,6 +283,141 @@ function renderPlotlyChart(elementId, chartData, type, orientation = 'v') {
     Plotly.newPlot(element, data, layout, { responsive: true, displayModeBar: false });
 }
 
+// ===============================================
+// ===== NOVAS FUNÇÕES DE GRÁFICOS AVANÇADOS =====
+// ===============================================
+
+/**
+ * NOVO: Renderiza um heatmap de atividade por dia da semana vs. hora.
+ */
+function renderTemporalHeatmap(elementId, chartData) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    if (!chartData || chartData.z.length === 0) {
+        element.innerHTML = '<p class="text-gray-500 text-center mt-4">Sem dados para exibir.</p>';
+        return;
+    }
+
+    const data = [{
+        z: chartData.z,
+        x: chartData.x,
+        y: chartData.y,
+        type: 'heatmap',
+        colorscale: 'Viridis',
+        reversescale: true
+    }];
+
+    const layout = {
+        title: 'Picos de Atividade Ilícita',
+        margin: { t: 40, b: 50, l: 50, r: 20 },
+        xaxis: { title: 'Hora do Dia' },
+        yaxis: { title: 'Dia da Semana' }
+    };
+
+    Plotly.newPlot(element, data, layout, { responsive: true, displayModeBar: false });
+}
+
+/**
+ * NOVO: Renderiza um Diagrama de Sankey para fluxos de rotas.
+ */
+function renderSankeyDiagram(elementId, chartData) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+     if (!chartData || chartData.source.length === 0) {
+        element.innerHTML = '<p class="text-gray-500 text-center mt-4">Sem dados para exibir.</p>';
+        return;
+    }
+    
+    const data = [{
+        type: "sankey",
+        orientation: "h",
+        node: {
+            pad: 15,
+            thickness: 20,
+            line: { color: "black", width: 0.5 },
+            label: chartData.labels,
+            color: "#4f46e5"
+        },
+        link: {
+            source: chartData.source,
+            target: chartData.target,
+            value: chartData.value
+        }
+    }];
+
+    const layout = {
+        title: "Fluxo das Principais Rotas Ilícitas",
+        margin: { t: 40, b: 10, l: 10, r: 10 }
+    };
+
+    Plotly.newPlot(element, data, layout, { responsive: true, displayModeBar: false });
+}
+
+/**
+ * NOVO: Template para renderizar um mapa geográfico.
+ * ATENÇÃO: Esta função requer uma forma de obter coordenadas (lat/lon) para os municípios.
+ * E também um TOKEN DE ACESSO do Mapbox.
+ */
+async function renderGeoMap(elementId, pontosData, rotasData) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    element.innerHTML = '<p class="text-gray-500 text-center mt-4">Funcionalidade de mapa requer configuração de geolocalização.</p>';
+
+    // --- CÓDIGO ABAIXO É UM EXEMPLO FUNCIONAL SE VOCÊ TIVER OS DADOS ---
+    // Para funcionar, você precisa de:
+    // 1. Um token do Mapbox. Crie uma conta em https://www.mapbox.com/
+    // 2. Um jeito de transformar nome de cidade em [longitude, latitude].
+    //    Ex: ter uma tabela no banco de dados ou usar uma API de Geocoding.
+    /*
+    const MAPBOX_TOKEN = 'SEU_TOKEN_AQUI'; 
+    if (MAPBOX_TOKEN === 'SEU_TOKEN_AQUI') return;
+
+    // Função de exemplo para buscar coordenadas (substitua pela sua lógica)
+    const getCoords = async (municipio) => {
+        // Exemplo: fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${municipio}.json?access_token=${MAPBOX_TOKEN}`)
+        // Esta é uma simulação. NÃO USE EM PRODUÇÃO.
+        const cityCoords = { "CIDADE A": [-46.6, -23.5], "CIDADE B": [-43.2, -22.9] };
+        return cityCoords[municipio] || [0,0];
+    };
+    
+    // Processar pontos
+    const lons = [], lats = [], texts = [], sizes = [];
+    for (const municipio in pontosData) {
+        const coords = await getCoords(municipio);
+        lons.push(coords[0]);
+        lats.push(coords[1]);
+        texts.push(`${municipio}: ${pontosData[municipio]}`);
+        sizes.push(pontosData[municipio]);
+    }
+
+    const pontosTrace = {
+        type: 'scattermapbox',
+        lon: lons, lat: lats, text: texts,
+        mode: 'markers',
+        marker: {
+            size: sizes.map(s => Math.sqrt(s) * 10), // Ajuste o tamanho
+            color: '#e53e3e',
+            opacity: 0.7
+        }
+    };
+
+    const layout = {
+        mapbox: {
+            style: 'streets',
+            center: { lon: -54, lat: -29 }, // Centralizar no RS
+            zoom: 4,
+            accesstoken: MAPBOX_TOKEN
+        },
+        margin: { t: 0, b: 0, l: 0, r: 0 },
+        showlegend: false
+    };
+
+    Plotly.newPlot(element, [pontosTrace], layout, { responsive: true, displayModeBar: false });
+    */
+}
+
+
 // --- INICIALIZAÇÃO DA PÁGINA DE ANÁLISE ---
 // Este código é executado assim que o conteúdo da página é totalmente carregado.
 document.addEventListener('DOMContentLoaded', () => {
@@ -287,4 +429,3 @@ document.addEventListener('DOMContentLoaded', () => {
         analiseBtn.addEventListener('click', handleAnaliseGeneration);
     }
 });
-

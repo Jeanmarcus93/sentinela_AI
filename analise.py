@@ -25,11 +25,11 @@ def api_analise_filtros():
                 # Busca locais de entrega distintos para o filtro
                 cur.execute("SELECT DISTINCT relato FROM ocorrencias WHERE tipo = 'Local de Entrega' AND relato IS NOT NULL ORDER BY 1;")
                 locais = [row[0] for row in cur.fetchall()]
-                
+
                 # Busca todos os tipos possíveis do enum de apreensões para o filtro
                 cur.execute("SELECT unnest(enum_range(NULL::tipo_apreensao_enum))::text ORDER BY 1;")
                 apreensoes = [row[0] for row in cur.fetchall()]
-                
+
         return jsonify(locais=locais, apreensoes=apreensoes)
     except Exception as e:
         print(f"ERRO em api_analise_filtros: {e}")
@@ -44,9 +44,9 @@ def api_analise_dados():
     placa = request.args.get('placa', None)
     data_inicio = request.args.get('data_inicio', None)
     data_fim = request.args.get('data_fim', None)
-    
+
     engine = get_engine()
-    
+
     try:
         # ---- Construção da Cláusula WHERE Dinâmica para filtrar veiculo_id ----
         params = {}
@@ -60,21 +60,21 @@ def api_analise_dados():
             # Converte a coluna enum para texto para permitir a comparação com a lista de strings
             subqueries.append("SELECT DISTINCT o.veiculo_id FROM ocorrencias o JOIN apreensoes a ON o.id = a.ocorrencia_id WHERE a.tipo::text = ANY(:apreensoes)")
             params['apreensoes'] = apreensoes_selecionadas
-        
+
         veiculo_id_filter = ""
         if subqueries:
             # Usa INTERSECT para encontrar veículos que correspondem a AMBOS os critérios (locais E apreensões)
             veiculo_id_filter = f"veiculo_id IN ({ ' INTERSECT '.join(subqueries) })"
-        
+
         # Constrói a cláusula WHERE principal para as consultas
         where_clauses = ["1=1"] # Inicia com uma condição sempre verdadeira
         if veiculo_id_filter:
             where_clauses.append(veiculo_id_filter)
-            
+
         if placa:
             where_clauses.append("veiculo_id = (SELECT id FROM veiculos WHERE placa = :placa)")
             params['placa'] = placa.upper()
-        
+
         if data_inicio:
             where_clauses.append("datahora >= :data_inicio")
             params['data_inicio'] = data_inicio
@@ -91,27 +91,41 @@ def api_analise_dados():
             """Função auxiliar para buscar e agregar dados para os gráficos de padrões."""
             query = text(f"SELECT municipio, rodovia, EXTRACT(HOUR FROM datahora) AS hora, EXTRACT(DOW FROM datahora) AS dow FROM {table_name} WHERE {base_where_sql} {extra_condition}")
             df = pd.read_sql(query, engine, params=params)
-            if df.empty: 
-                return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}}
             
-            # Conta a frequência dos 10 principais municípios e rodovias
+            # **NOVO: Prepara dados para o Heatmap Temporal**
+            heatmap_data = {}
+            if not df.empty:
+                # Mapeia o dia da semana (número) para o nome abreviado
+                dias_map = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
+                df['dia_semana'] = df['dow'].map(dias_map)
+                
+                # Cria a matriz para o heatmap
+                heatmap_pivot = df.pivot_table(index='dia_semana', columns='hora', aggfunc='size', fill_value=0)
+                heatmap_pivot = heatmap_pivot.reindex(list(dias_map.values())).dropna(how='all') # Ordena os dias
+                heatmap_data = {
+                    "y": heatmap_pivot.index.tolist(), # Dias da semana
+                    "x": [str(int(h)) for h in heatmap_pivot.columns], # Horas
+                    "z": heatmap_pivot.values.tolist() # Contagem
+                }
+
+            if df.empty:
+                return {"municipio": {}, "rodovia": {}, "hora": {}, "dia_semana": {}, "heatmap_temporal": {}}
+                
             df_mun, df_rodo = df['municipio'].value_counts().head(10), df['rodovia'].value_counts().head(10)
             df_hora = df['hora'].astype(int).value_counts().sort_index()
-            
-            # Mapeia o dia da semana (número) para o nome abreviado
-            dias_map = {0: "Dom", 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb"}
-            df['dia_semana'] = df['dow'].map(dias_map)
             df_dow = df['dia_semana'].value_counts().reindex(list(dias_map.values())).dropna()
 
             return {
                 "municipio": {"labels": df_mun.index.tolist(), "data": df_mun.values.tolist()},
                 "rodovia": {"labels": df_rodo.index.tolist(), "data": df_rodo.values.tolist()},
                 "hora": {"labels": [str(h) for h in df_hora.index], "data": df_hora.values.tolist()},
-                "dia_semana": {"labels": df_dow.index.tolist(), "data": df_dow.values.tolist()}
+                "dia_semana": {"labels": df_dow.index.tolist(), "data": df_dow.values.tolist()},
+                "heatmap_temporal": heatmap_data,
+                "pontos_geograficos": df['municipio'].value_counts().to_dict() # Para o mapa de calor geográfico
             }
 
         dados_ida = get_chart_data("passagens", "AND ilicito_ida IS TRUE")
-        
+
         # --- Análise Logística ---
         query_lead_time = text(f"SELECT datahora, datahora_fim FROM ocorrencias WHERE tipo = 'Local de Entrega' AND datahora_fim IS NOT NULL AND {base_where_sql}")
         df_lead_time = pd.read_sql(query_lead_time, engine, params=params)
@@ -135,12 +149,29 @@ def api_analise_dados():
                 FROM ocorrencias
                 WHERE tipo = 'Local de Entrega' AND {base_where_sql}
             )
-            SELECT v.municipio_partida || ' -> ' || c.municipio_chegada AS rota, COUNT(*) AS total
+            SELECT v.municipio_partida, c.municipio_chegada, COUNT(*) AS total
             FROM viagens_ilicitas v JOIN chegadas c ON v.veiculo_id = c.veiculo_id
-            GROUP BY rota ORDER BY total DESC LIMIT 10;
+            WHERE v.municipio_partida IS NOT NULL AND c.municipio_chegada IS NOT NULL
+            GROUP BY v.municipio_partida, c.municipio_chegada ORDER BY total DESC LIMIT 15;
         """)
         df_rotas = pd.read_sql(query_rotas, engine, params=params)
-        rotas_chart = {"labels": df_rotas['rota'].tolist(), "data": df_rotas['total'].values.tolist()}
+        
+        # **NOVO: Prepara dados para o Diagrama de Sankey e para o Mapa de Rotas**
+        sankey_data = {}
+        if not df_rotas.empty:
+            # Prepara os nós (origens e destinos únicos)
+            nodes = pd.concat([df_rotas['municipio_partida'], df_rotas['municipio_chegada']]).unique().tolist()
+            node_map = {node: i for i, node in enumerate(nodes)}
+
+            sankey_data = {
+                "labels": nodes,
+                "source": df_rotas['municipio_partida'].map(node_map).tolist(),
+                "target": df_rotas['municipio_chegada'].map(node_map).tolist(),
+                "value": df_rotas['total'].tolist()
+            }
+        
+        rotas_formatadas = (df_rotas['municipio_partida'] + ' -> ' + df_rotas['municipio_chegada']).tolist()
+        rotas_chart = {"labels": rotas_formatadas, "data": df_rotas['total'].values.tolist()}
         total_viagens = int(df_rotas['total'].sum())
         
         # --- Inteligência de Perfil de Veículos e Apreensões ---
@@ -162,8 +193,13 @@ def api_analise_dados():
             apreensoes_chart = {"labels": df_apreensoes.index.tolist(), "data": df_apreensoes.values.tolist()}
 
         inteligencia_data = {
-            "total_viagens": total_viagens, "rotas": rotas_chart, "veiculos_modelos": modelos_chart,
-            "veiculos_cores": cores_chart, "apreensoes": apreensoes_chart
+            "total_viagens": total_viagens, 
+            "rotas": rotas_chart, 
+            "veiculos_modelos": modelos_chart,
+            "veiculos_cores": cores_chart, 
+            "apreensoes": apreensoes_chart,
+            "sankey": sankey_data,
+            "rotas_geograficas": df_rotas.to_dict(orient='records') # Para o mapa de rotas
         }
         
         return jsonify(ida=dados_ida, logistica=logistica_data, inteligencia=inteligencia_data)
@@ -173,4 +209,3 @@ def api_analise_dados():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Não foi possível gerar os dados de análise."}), 500
-
