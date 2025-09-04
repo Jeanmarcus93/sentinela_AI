@@ -1,12 +1,18 @@
-import psycopg2
-from database import DB_CONFIG_TESTE as DB_CONFIG
+import psycopg
+import sys
+import os
 
-# 2. Definição da função para criar as tabelas
+# Garante que o script encontre o arquivo database.py
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from database import DB_CONFIG
+
+# Definição da função para criar as tabelas
 def criar_tabelas():
     """Cria TODAS as tabelas no banco de dados com a estrutura correta e unificada."""
     conn = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        # Usa a configuração principal do banco de dados
+        conn = psycopg.connect(**DB_CONFIG)
         cur = conn.cursor()
 
         # --- Tabelas Adicionais da Aplicação Web ---
@@ -18,7 +24,7 @@ def criar_tabelas():
             );
         """)
 
-        # Tabela de veículos (versão completa para extrator e app)
+        # Tabela de veículos
         cur.execute("""
             CREATE TABLE IF NOT EXISTS veiculos (
                 id SERIAL PRIMARY KEY,
@@ -27,33 +33,21 @@ def criar_tabelas():
                 tipo VARCHAR(100),
                 ano_modelo VARCHAR(20),
                 cor VARCHAR(50),
-                local_emplacamento VARCHAR(255),
-                transferencia_recente BOOLEAN DEFAULT FALSE,
-                comunicacao_venda BOOLEAN DEFAULT FALSE,
-                crime_prf BOOLEAN DEFAULT FALSE,
-                abordagem_prf BOOLEAN DEFAULT FALSE
+                local_emplacamento VARCHAR(255)
             );
         """)
 
-        # Tabela de pessoas (versão completa para extrator e app)
+        # Tabela de pessoas
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pessoas (
                 id SERIAL PRIMARY KEY,
                 veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
                 nome VARCHAR(255),
-                cpf_cnpj VARCHAR(20) UNIQUE NOT NULL,
-                cnh VARCHAR(20),
-                validade_cnh DATE,
-                local_cnh VARCHAR(255),
-                suspeito BOOLEAN DEFAULT FALSE,
-                relevante BOOLEAN DEFAULT FALSE,
-                proprietario BOOLEAN DEFAULT FALSE,
-                condutor BOOLEAN DEFAULT FALSE,
-                possuidor BOOLEAN DEFAULT FALSE
+                cpf_cnpj VARCHAR(20) UNIQUE
             );
         """)
 
-        # Tabela de passagens (unificada com campos para o app)
+        # Tabela de passagens
         cur.execute("""
             CREATE TABLE IF NOT EXISTS passagens (
                 id SERIAL PRIMARY KEY,
@@ -67,11 +61,11 @@ def criar_tabelas():
             );
         """)
         
-        # Tabela de ocorrências (para o app)
+        # Tabela de ocorrências (COM A COLUNA CORRIGIDA)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS ocorrencias (
                 id SERIAL PRIMARY KEY,
-                veiculo_id INTEGER REFERENCES veiculos(id),
+                veiculo_id INTEGER REFERENCES veiculos(id), -- ESTA LINHA É ESSENCIAL
                 tipo VARCHAR(50) NOT NULL,
                 datahora TIMESTAMP NOT NULL,
                 datahora_fim TIMESTAMP,
@@ -93,7 +87,7 @@ def criar_tabelas():
             );
         """)
                     
-        # Tipos ENUM e tabela de apreensões (para o app)
+        # Tipos ENUM e tabela de apreensões
         cur.execute("""
             DO $$ BEGIN
                 CREATE TYPE tipo_apreensao_enum AS ENUM ('Maconha', 'Skunk', 'Cocaina', 'Crack', 'Sintéticos', 'Arma');
@@ -119,15 +113,12 @@ def criar_tabelas():
         """)
 
         conn.commit()
-        print("Estrutura das tabelas verificada com sucesso.")
-    except psycopg2.Error as e:
+        print("Estrutura das tabelas verificada/criada com sucesso.")
+    except psycopg.Error as e:
         print(f"Erro ao criar tabelas: {e}")
         if conn:
             conn.rollback()
     finally:
         if conn:
             conn.close()
-
-
-
 

@@ -1,17 +1,11 @@
-# semantic_local.py
+# semantic_local.py - Versão com correções críticas
 from __future__ import annotations
 import re, json, os
-from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple
 
 import numpy as np
 import joblib
-import yake
-import spacy
 from sentence_transformers import SentenceTransformer
-from sklearn.linear_model import LogisticRegression
-from sklearn.multiclass import OneVsRestClassifier
-from sklearn.calibration import CalibratedClassifierCV
 
 # =========================
 # Config e caminhos
@@ -19,28 +13,20 @@ from sklearn.calibration import CalibratedClassifierCV
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
-SPACY_MODEL = os.environ.get("SPACY_PT_MODEL", "pt_core_news_lg")
-EMB_MODEL_NAME = os.environ.get("SENTENCE_EMB_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+EMB_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 CLF_PATH = os.path.join(MODELS_DIR, "semantic_clf.joblib")
 LBL_PATH = os.path.join(MODELS_DIR, "semantic_labels.joblib")
 
-SUPPORTED_CLASSES = ["TRAFICO", "PORTE_ARMA", "RECEPTACAO", "OUTROS"]
+# CLASSES ALINHADAS COM O TREINAMENTO HÍBRIDO
+SUPPORTED_CLASSES = ["SEM_ALTERACAO", "SUSPEITO"]
 
 # =========================
-# Carregamento de pipelines
+# Carregamento
 # =========================
-_nlp = None
 _emb = None
-_yake = None
 _clf = None
 _lbl = None
-
-def load_spacy():
-    global _nlp
-    if _nlp is None:
-        _nlp = spacy.load(SPACY_MODEL, disable=["tagger"])  # NER + Parser bons no 'lg'
-    return _nlp
 
 def load_embeddings():
     global _emb
@@ -48,130 +34,340 @@ def load_embeddings():
         _emb = SentenceTransformer(EMB_MODEL_NAME, trust_remote_code=True)
     return _emb
 
-def load_yake():
-    global _yake
-    if _yake is None:
-        _yake = yake.KeywordExtractor(lan="pt", n=1, top=15, windowsSize=2, dedupLim=0.9)
-    return _yake
-
 def load_classifier():
     global _clf, _lbl
     if _clf is None and os.path.exists(CLF_PATH) and os.path.exists(LBL_PATH):
-        _clf = joblib.load(CLF_PATH)
-        _lbl = joblib.load(LBL_PATH)
+        try:
+            _clf = joblib.load(CLF_PATH)
+            _lbl = joblib.load(LBL_PATH)
+        except Exception as e:
+            print(f"Erro ao carregar classificador: {e}")
+            _clf = None
+            _lbl = None
     return _clf, _lbl
 
 # =========================
-# Utilidades de features
+# CLASSE HÍBRIDA CORRIGIDA
 # =========================
-# ATUALIZAÇÃO: Inclusão das novas palavras-chave
-DRUG_TERMS = r"\b(maconha|skunk|coca[ií]na|p[oó]|crack|sint[eé]tico[s]?|mdma|lsd|droga[s]?|tr[aá]fico)\b"
-WEAPON_TERMS = r"\b(arma[s]?|rev[oó]lver|pistola|muni[cç][aã]o|fuzil)\b"
-THEFT_TERMS = r"\b(roubou|furtou|recepta[cç][aã]o|recupera[cç][aã]o|clonado|adulterado)\b"
-SUSPICIOUS_TERMS = r"\b(mentiu|batedor|fronteira|ec ruim|estado de conserva[cç][aã]o ruim|homic[ií]dio)\b"
-DELIVERY_TERMS = r"\b(entrega|entregue|local de entrega|drop|desova|repasse)\b"
-
-QUANT_PATTERN = r"(\d+[.,]?\d*)\s?(kg|g|un)\b"
-
-def simple_norm(s: str) -> str:
-    return re.sub(r"\s+", " ", s.strip().lower())
-
-def rule_based_indicators(text: str) -> Dict[str, Any]:
-    t = simple_norm(text)
-    # ATUALIZAÇÃO: Contagem dos novos termos
-    drugs = len(re.findall(DRUG_TERMS, t, flags=re.IGNORECASE))
-    weapons = len(re.findall(WEAPON_TERMS, t, flags=re.IGNORECASE))
-    theft = len(re.findall(THEFT_TERMS, t, flags=re.IGNORECASE))
-    suspicious = len(re.findall(SUSPICIOUS_TERMS, t, flags=re.IGNORECASE))
-    delivery = len(re.findall(DELIVERY_TERMS, t, flags=re.IGNORECASE))
-    quants = re.findall(QUANT_PATTERN, t, flags=re.IGNORECASE)
-
-    total_kg = 0.0
-    total_un = 0
-    for q, unit in quants:
-        try:
-            val = float(q.replace(",", "."))
-        except:
-            val = 0.0
-        if unit.lower() == "kg":
-            total_kg += val
-        elif unit.lower() == "g":
-            total_kg += val / 1000.0
+class HybridClassifier:
+    """Classificador híbrido com lógica corrigida"""
+    def __init__(self, ml_model, always_suspeito, always_sem_alteracao, indicadores):
+        self.ml_model = ml_model
+        self.always_suspeito = always_suspeito
+        self.always_sem_alteracao = always_sem_alteracao
+        self.indicadores = indicadores
+        self.classes_ = ml_model.classes_
+    
+    def classify_by_rules_enhanced(self, texto: str) -> Optional[str]:
+        """Classificação por regras MELHORADAS"""
+        texto_lower = texto.lower()
+        
+        # CORREÇÃO 1: APREENSÕES REAIS (qualquer quantidade + droga/arma)
+        apreensao_patterns = [
+            r'\d+\s*kg\s*de\s*(crack|cocaina|maconha|skunk)',  # "8 kg de crack"
+            r'encontrad[oa]s?\s*\d+\s*kg',  # "encontrados 8 kg"
+            r'apreendid[oa]s?\s*\d+\s*kg',  # "apreendidos 5 kg"
+            r'(crack|cocaina|maconha)\s+escondid[oa]',  # "crack escondido"
+            r'(crack|cocaina|maconha)\s+encontrad[oa]',  # "maconha encontrada"
+            r'\d+\s*kg.*?(crack|cocaina|maconha)',  # qualquer variação
+        ]
+        
+        for pattern in apreensao_patterns:
+            if re.search(pattern, texto_lower):
+                return "SUSPEITO"
+        
+        # CORREÇÃO 2: Passagens criminais específicas
+        criminal_patterns = [
+            r'passagem.*?por.*?trafico',
+            r'ficha.*?criminal.*(trafico|homicidio|roubo)',
+            r'antecedentes.*(trafico|homicidio|porte.*arma)',
+            r'organizacao criminosa',
+            r'faccao.*?(bala|manos|cv|pcc)',
+        ]
+        
+        for pattern in criminal_patterns:
+            if re.search(pattern, texto_lower):
+                return "SUSPEITO"
+        
+        # Regras originais SEMPRE_SUSPEITO (mantidas)
+        for regra in self.always_suspeito:
+            if regra in texto_lower:
+                return "SUSPEITO"
+        
+        # Regras SEMPRE_SEM_ALTERACAO (mais específicas)
+        specific_normal_patterns = [
+            r'fiscalizacao\s+de\s+rotina.*documentos.*ordem',
+            r'nada.*encontrado.*liberado',
+            r'verificacao.*rotina.*sem.*alteracao',
+        ]
+        
+        for pattern in specific_normal_patterns:
+            if re.search(pattern, texto_lower):
+                return "SEM_ALTERACAO"
+        
+        # Regras originais (apenas se muito específicas)
+        specific_normal = [
+            "fiscalizacao de rotina", "verificacao de rotina", 
+            "abordagem normal", "tudo normal", "sem irregularidade"
+        ]
+        for regra in specific_normal:
+            if regra in texto_lower and "nada encontrado" in texto_lower:
+                return "SEM_ALTERACAO"
+        
+        return None  # Caso ambíguo - usar ML
+    
+    def predict(self, X_text_or_embeddings):
+        """Predição híbrida CORRIGIDA"""
+        if isinstance(X_text_or_embeddings, list) and isinstance(X_text_or_embeddings[0], str):
+            predictions = []
+            for texto in X_text_or_embeddings:
+                rule_pred = self.classify_by_rules_enhanced(texto)
+                if rule_pred:
+                    predictions.append(rule_pred)
+                else:
+                    # ML com threshold ajustado
+                    X_embed = embed([texto])
+                    ml_proba = self.ml_model.predict_proba(X_embed)[0]
+                    
+                    # CORREÇÃO 3: Usar score manual para casos ambíguos
+                    manual_score = calculate_enhanced_score(texto)
+                    
+                    # Lógica híbrida melhorada
+                    if manual_score >= 10:  # Score alto = SUSPEITO
+                        predictions.append("SUSPEITO")
+                    elif manual_score <= -5:  # Score muito negativo = SEM_ALTERACAO
+                        predictions.append("SEM_ALTERACAO")
+                    else:
+                        # Usar ML com threshold mais conservador
+                        prob_suspeito = ml_proba[1] if len(ml_proba) > 1 else ml_proba[0]
+                        if prob_suspeito > 0.4:  # Threshold mais baixo para capturar suspeitos
+                            predictions.append("SUSPEITO")
+                        else:
+                            predictions.append("SEM_ALTERACAO")
+            return np.array(predictions)
         else:
-            total_un += int(val)
+            return self.ml_model.predict(X_text_or_embeddings)
+    
+    def predict_proba(self, X_text_or_embeddings):
+        """Probabilidades híbridas CORRIGIDAS"""
+        if isinstance(X_text_or_embeddings, list) and isinstance(X_text_or_embeddings[0], str):
+            probabilities = []
+            for texto in X_text_or_embeddings:
+                rule_pred = self.classify_by_rules_enhanced(texto)
+                if rule_pred == "SUSPEITO":
+                    probabilities.append([0.05, 0.95])  # Alta confiança SUSPEITO
+                elif rule_pred == "SEM_ALTERACAO":
+                    probabilities.append([0.95, 0.05])  # Alta confiança SEM_ALTERACAO
+                else:
+                    # ML com ajuste baseado em score manual
+                    X_embed = embed([texto])
+                    ml_proba = self.ml_model.predict_proba(X_embed)[0]
+                    manual_score = calculate_enhanced_score(texto)
+                    
+                    # Ajustar probabilidades baseado no score manual
+                    if manual_score >= 10:
+                        # Forçar para suspeito se score alto
+                        probabilities.append([0.2, 0.8])
+                    elif manual_score <= -5:
+                        # Forçar para sem alteração se score muito negativo
+                        probabilities.append([0.8, 0.2])
+                    else:
+                        # Usar ML puro
+                        probabilities.append(ml_proba)
+            return np.array(probabilities)
+        else:
+            return self.ml_model.predict_proba(X_text_or_embeddings)
 
-    # ATUALIZAÇÃO: Score heurístico ajustado para incluir novos indicadores
-    score = (drugs * 25) + (weapons * 25) + (theft * 20) + (suspicious * 15) + (delivery * 15) + min(total_kg * 10, 40) + min(total_un * 0.5, 20)
-    score = max(0, min(100, score))
+    # Adicionar método para compatibilidade
+    def classify_by_rules(self, texto: str) -> Optional[str]:
+        """Método para compatibilidade - usa versão melhorada"""
+        return self.classify_by_rules_enhanced(texto)
 
-    return {
-        "drugs_hits": drugs,
-        "weapons_hits": weapons,
-        "theft_hits": theft,
-        "suspicious_hits": suspicious,
-        "delivery_hits": delivery,
-        "total_kg": round(total_kg, 3),
-        "total_un": total_un,
-        "rule_score": score
-    }
-
-def extract_keywords(text: str, topk: int = 10) -> List[Tuple[str, float]]:
-    kw = load_yake()
-    return kw.extract_keywords(text)[:topk]
-
+# =========================
+# Funcionalidades essenciais CORRIGIDAS
+# =========================
 def embed(texts: List[str]) -> np.ndarray:
+    """Função principal de embedding - ESSENCIAL"""
     model = load_embeddings()
     return model.encode(texts, normalize_embeddings=True)
 
-def spacy_entities(text: str) -> List[Dict[str, Any]]:
-    nlp = load_spacy()
-    doc = nlp(text)
-    ents = []
-    for e in doc.ents:
-        ents.append({"text": e.text, "label": e.label_})
-    return ents
+def calculate_enhanced_score(text: str) -> float:
+    """Score manual CORRIGIDO com melhor detecção"""
+    t = text.lower()
+    score = 0
+    
+    # CORREÇÃO 1: Apreensões reais têm peso máximo
+    apreensao_patterns = [
+        (r'\d+\s*kg\s*de\s*(crack|cocaina|maconha)', 50),  # Apreensão específica
+        (r'encontrad[oa].*?(crack|cocaina|maconha)', 40),   # Droga encontrada
+        (r'apreendid[oa].*?(droga|crack|cocaina)', 45),     # Droga apreendida
+        (r'escondid[oa].*?(crack|cocaina|maconha)', 35),    # Droga escondida
+    ]
+    
+    for pattern, peso in apreensao_patterns:
+        if re.search(pattern, t):
+            score += peso
+    
+    # CORREÇÃO 2: Passagens criminais contextualizadas
+    criminal_patterns = [
+        (r'passagem.*?trafico', 25),
+        (r'ficha.*criminal.*(trafico|homicidio)', 20),
+        (r'antecedentes.*(trafico|porte.*arma)', 20),
+        (r'organizacao criminosa', 30),
+        (r'faccao.*?(bala|manos)', 35),
+    ]
+    
+    for pattern, peso in criminal_patterns:
+        if re.search(pattern, t):
+            score += peso
+    
+    # CORREÇÃO 3: Indicadores contextuais (não palavras soltas)
+    contexto_suspeito = [
+        (r'bate.*volta.*fronteira', 15),  # Bate volta real na fronteira
+        (r'historia.*estranha.*mentiu', 12),  # Combinação de indicadores
+        (r'nervoso.*contradição', 10),
+        (r'nao.*soube.*explicar.*viagem', 8),
+        (r'madrugada.*sem.*motivo', 8),
+    ]
+    
+    for pattern, peso in contexto_suspeito:
+        if re.search(pattern, t):
+            score += peso
+    
+    # CORREÇÃO 4: Indicadores de normalidade mais específicos
+    normal_patterns = [
+        (r'fiscalizacao.*rotina.*nada.*encontrado', -20),
+        (r'documentos.*ordem.*liberado', -15),
+        (r'consulta.*medica.*hospital', -10),
+        (r'trabalho.*comprovado', -8),
+    ]
+    
+    for pattern, peso in normal_patterns:
+        if re.search(pattern, t):
+            score += peso
+    
+    # Indicadores básicos (peso menor)
+    if re.search(r'\b(nervoso|inquieto|agitado)\b', t):
+        score += 3
+    if re.search(r'\b(mentiu|contradicao)\b', t):
+        score += 5
+    if re.search(r'\b(antecedentes|denuncia)\b', t):
+        score += 4
+    
+    # Redutores básicos
+    if re.search(r'\bnada.*encontrado\b', t):
+        score -= 8
+    if re.search(r'\bliberado\b', t):
+        score -= 5
+    
+    return score
 
-# =========================
-# Predição / fallback
-# =========================
-def predict_class(text: str) -> Tuple[str, float, Dict[str, Any]]:
+def rule_based_indicators(text: str) -> Dict[str, Any]:
+    """Indicadores baseados em regras CORRIGIDAS"""
+    t = text.lower()
+    
+    # Contadores específicos e contextuais
+    apreensoes = len(re.findall(r'\d+\s*kg\s*de\s*(crack|cocaina|maconha)', t))
+    drogas_encontradas = len(re.findall(r'encontrad[oa].*?(crack|cocaina|maconha|droga)', t))
+    armas = len(re.findall(r'\b(arma|revolver|pistola|municao)\b', t))
+    criminal_history = len(re.findall(r'(passagem.*trafico|ficha.*criminal|antecedentes.*trafico)', t))
+    
+    # Comportamento contextual
+    comportamento_suspeito = len(re.findall(r'(nervoso.*mentiu|historia.*estranha|nao.*soube.*explicar)', t))
+    
+    # Contexto geográfico/temporal real
+    padrao_geografico = len(re.findall(r'(bate.*volta.*fronteira|madrugada.*sem.*motivo)', t))
+    
+    # Normalidade específica
+    indicadores_normais = len(re.findall(r'(fiscalizacao.*rotina|documentos.*ordem|nada.*encontrado)', t))
+    
+    # Score total corrigido
+    score = calculate_enhanced_score(text)
+
+    return {
+        "apreensoes_reais": apreensoes,
+        "drogas_encontradas": drogas_encontradas,
+        "armas_hits": armas,
+        "criminal_history": criminal_history,
+        "comportamento_suspeito": comportamento_suspeito,
+        "padrao_geografico": padrao_geografico,
+        "indicadores_normais": indicadores_normais,
+        "rule_score": score
+    }
+
+def predict_class_hybrid(text: str) -> Tuple[str, float, Dict[str, Any]]:
+    """Predição usando modelo híbrido CORRIGIDO"""
     indicators = rule_based_indicators(text)
     clf, lbl = load_classifier()
 
     if clf is not None and lbl is not None:
-        X = embed([text])
-        proba = clf.predict_proba(X)[0]
-        idx = int(np.argmax(proba))
-        classe = lbl[idx]
-        p = float(np.max(proba))
-        model_score = int(round(100 * p))
-        final = int(round(0.6 * model_score + 0.4 * indicators["rule_score"]))
-        return classe, final, {"probas": {lbl[i]: float(proba[i]) for i in range(len(lbl))}, "indicators": indicators}
+        try:
+            if hasattr(clf, 'classify_by_rules_enhanced'):
+                # Modelo híbrido corrigido
+                predictions = clf.predict([text])
+                probabilities = clf.predict_proba([text])[0]
+                
+                classe = predictions[0]
+                
+                # Calcular confiança
+                if len(lbl) == 2:
+                    prob_sem_alt = probabilities[0] if lbl[0] == "SEM_ALTERACAO" else probabilities[1]
+                    prob_suspeito = probabilities[1] if lbl[1] == "SUSPEITO" else probabilities[0]
+                    confianca = max(prob_sem_alt, prob_suspeito)
+                else:
+                    confianca = float(np.max(probabilities))
+                
+                final_score = int(round(100 * confianca))
+                
+                return classe, final_score, {
+                    "probas": {lbl[i]: float(probabilities[i]) for i in range(len(lbl))}, 
+                    "indicators": indicators,
+                    "method": "hybrid_enhanced"
+                }
+        except Exception as e:
+            print(f"Erro na predição: {e}")
 
-    # Fallback puramente por regras se não tiver modelo treinado
-    c = "OUTROS"
-    if indicators["drugs_hits"] > 0 or indicators["total_kg"] > 0:
-        c = "TRAFICO"
-    elif indicators["weapons_hits"] > 0:
-        c = "PORTE_ARMA"
-    elif indicators["theft_hits"] > 0:
-        c = "RECEPTACAO"
-    return c, indicators["rule_score"], {"probas": {}, "indicators": indicators}
+    # Fallback com lógica corrigida
+    score = indicators["rule_score"]
+    
+    # CORREÇÃO FINAL: Thresholds baseados em análise real
+    if score >= 25:  # Casos claros de suspeita
+        classe = "SUSPEITO"
+        confianca = min(0.95, (score / 50) + 0.5)
+    elif score <= -10:  # Casos claramente normais
+        classe = "SEM_ALTERACAO"  
+        confianca = min(0.95, (-score / 20) + 0.5)
+    elif score >= 10:  # Suspeita moderada
+        classe = "SUSPEITO"
+        confianca = 0.7
+    else:  # Casos neutros
+        classe = "SEM_ALTERACAO"
+        confianca = 0.6
+    
+    final_score = int(confianca * 100)
+    
+    return classe, final_score, {
+        "probas": {"SEM_ALTERACAO": 1-confianca, "SUSPEITO": confianca}, 
+        "indicators": indicators,
+        "method": "rules_enhanced"
+    }
 
-# =========================
-# API de alto nível
-# =========================
 def analyze_text(relato: str) -> Dict[str, Any]:
+    """Análise completa de texto CORRIGIDA"""
     relato = relato or ""
-    classe, score, extra = predict_class(relato)
-    kws = extract_keywords(relato, topk=10)
-    ents = spacy_entities(relato)
+    classe, score, extra = predict_class_hybrid(relato)
 
     return {
         "classe": classe,
         "pontuacao": score,  # 0..100
-        "keywords": [{"term": k, "score": float(v)} for k, v in kws],
-        "entidades": ents,
+        "keywords": [],  # Simplificado por ora
+        "entidades": [],  # Vazio sem spaCy
         "indicadores": extra["indicators"],
-        "probs": extra.get("probas", {})
+        "probs": extra.get("probas", {}),
+        "method": extra.get("method", "unknown")
     }
+
+# Manter compatibilidade
+def predict_class(text: str) -> Tuple[str, float, Dict[str, Any]]:
+    """Alias para compatibilidade"""
+    return predict_class_hybrid(text)

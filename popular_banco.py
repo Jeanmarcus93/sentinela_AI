@@ -5,18 +5,17 @@ from faker import Faker
 import sys
 import os
 
-# Garante que o script encontre o arquivo database.py
+# Garante que o script encontre os outros arquivos do projeto
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from database import DB_CONFIG
+from config import criar_tabelas # IMPORTANTE: Importa a função de criar tabelas
 
 # Inicializa o Faker para gerar dados fictícios em português
 fake = Faker('pt_BR')
 
 # --- CONFIGURAÇÕES FINAIS ---
-# Vamos treinar com mais casos normais do que suspeitos para refletir a realidade
-# e forçar o modelo a ser mais criterioso.
-NUM_SUSPEITO = 20000
-NUM_SEM_ALTERACAO = 30000
+NUM_SUSPEITO = 2000
+NUM_SEM_ALTERACAO = 3000 
 
 def buscar_veiculos(cursor):
     """Busca uma lista de IDs de veículos existentes no banco."""
@@ -58,7 +57,6 @@ def gerar_relato_dinamico(categoria: str) -> str:
         return relato
 
     elif categoria == "SEM_ALTERACAO":
-        # **NOVO: Relatos com "pistas falsas" para ensinar o contexto ao modelo**
         pistas_falsas = [
             f"Veículo parado em local ermo de madrugada. O condutor explicou que é fotógrafo e estava a registar a via láctea. Equipamento compatível (câmara, tripé) no porta-malas. Documentação em ordem.",
             f"Abordagem a veículo com matrícula de {fake.state_abbr()}. O condutor, nervoso no início, explicou que era a sua primeira vez a conduzir na autoestrada. Documentos e teste de álcool em conformidade.",
@@ -67,7 +65,6 @@ def gerar_relato_dinamico(categoria: str) -> str:
             f"Carro de luxo com condutor de aparência simples. Na verificação, constatou-se que era o motorista particular do proprietário, a caminho de o ir buscar ao aeroporto. Contacto com o proprietário confirmou a história."
         ]
         
-        # Relatos normais, sem qualquer suspeita
         normais = [
             f"Abordagem de rotina na BR-116. O condutor era um(a) {fake.job()} que viajava a trabalho. Documentação do veículo e do condutor em dia.",
             f"Fiscalização de rotina em frente ao posto da PRF. Tratava-se de uma família voltando de férias. Nenhuma irregularidade foi encontrada.",
@@ -76,21 +73,19 @@ def gerar_relato_dinamico(categoria: str) -> str:
             f"Veículo de uma empresa de entregas. A carga do caminhão estava de acordo com a nota fiscal."
         ]
         
-        # **AJUSTE CRÍTICO:** Aumentamos a probabilidade de gerar relatos com "pistas falsas"
-        # para ensinar o modelo a não tirar conclusões precipitadas.
         return random.choice(pistas_falsas * 2 + normais)
 
     return ""
 
 
-def inserir_ocorrencias(conn, veiculo_ids):
+def inserir_ocorrencias(conn, veiculos_ids):
     """Gera e insere os dados no banco de dados usando o gerador dinâmico."""
     
     with conn.cursor() as cur:
         print(f"Gerando {NUM_SUSPEITO} ocorrências de SUSPEITO (relatos únicos)...")
         for _ in range(NUM_SUSPEITO):
             relato = gerar_relato_dinamico("SUSPEITO")
-            veiculo_id = random.choice(veiculo_ids)
+            veiculo_id = random.choice(veiculos_ids)
             datahora = fake.date_time_between(start_date="-3y", end_date="now")
             cur.execute(
                 "INSERT INTO ocorrencias (veiculo_id, tipo, datahora, relato) VALUES (%s, %s, %s, %s)",
@@ -100,7 +95,7 @@ def inserir_ocorrencias(conn, veiculo_ids):
         print(f"Gerando {NUM_SEM_ALTERACAO} ocorrências de SEM ALTERAÇÃO (com treino de contexto)...")
         for _ in range(NUM_SEM_ALTERACAO):
             relato = gerar_relato_dinamico("SEM_ALTERACAO")
-            veiculo_id = random.choice(veiculo_ids)
+            veiculo_id = random.choice(veiculos_ids)
             datahora = fake.date_time_between(start_date="-3y", end_date="now")
             cur.execute(
                 "INSERT INTO ocorrencias (veiculo_id, tipo, datahora, relato) VALUES (%s, %s, %s, %s)",
@@ -112,19 +107,24 @@ def inserir_ocorrencias(conn, veiculo_ids):
 
 def main():
     try:
+        # IMPORTANTE: Garante que as tabelas existem antes de qualquer operação
+        criar_tabelas()
+
         with psycopg.connect(**DB_CONFIG) as conn:
             print("Limpando dados de ocorrências antigas para um novo treino...")
             with conn.cursor() as cur:
+                # O comando TRUNCATE agora deve funcionar pois as tabelas já foram criadas
                 cur.execute("TRUNCATE TABLE apreensoes, ocorrencias RESTART IDENTITY;")
                 print("Tabelas 'apreensoes' e 'ocorrencias' limpas.")
 
             with conn.cursor() as cur:
-                veiculo_ids = buscar_veiculos(cur)
+                veiculos_ids = buscar_veiculos(cur)
             
-            if not veiculo_ids:
+            if not veiculos_ids:
                 return
 
-            inserir_ocorrencias(conn, veiculo_ids)
+            # CORREÇÃO: O nome da variável aqui deve ser 'veiculos_ids' (plural)
+            inserir_ocorrencias(conn, veiculos_ids)
 
     except psycopg.Error as e:
         print(f"Erro de banco de dados: {e}")
@@ -134,5 +134,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
