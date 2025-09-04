@@ -15,7 +15,7 @@ from sklearn.metrics import classification_report
 GAP_HOURS_NEW_TRIP = 4.0             # gap >= 4h separa viagens
 SHORT_TRIP_MAX_HOURS = 3.0           # viagem curta: duração <= 3h
 SHORT_TRIP_MAX_STOPS = 2             # viagem curta: <= 2 municípios distintos
-NIGHT_START = 22                     # noite: 22:00
+NIGHT_START = 22                     # noite: 20:00
 NIGHT_END = 6                        # até 06:00
 
 # ========= Caminhos/DB =========

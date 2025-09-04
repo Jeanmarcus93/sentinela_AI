@@ -64,8 +64,11 @@ def load_classifier():
 # =========================
 # Utilidades de features
 # =========================
-DRUG_TERMS = r"\b(maconha|skunk|coca[ií]na|crack|sint[eé]tico[s]?|mdma|lsd|droga[s]?)\b"
+# ATUALIZAÇÃO: Inclusão das novas palavras-chave
+DRUG_TERMS = r"\b(maconha|skunk|coca[ií]na|p[oó]|crack|sint[eé]tico[s]?|mdma|lsd|droga[s]?|tr[aá]fico)\b"
 WEAPON_TERMS = r"\b(arma[s]?|rev[oó]lver|pistola|muni[cç][aã]o|fuzil)\b"
+THEFT_TERMS = r"\b(roubou|furtou|recepta[cç][aã]o|recupera[cç][aã]o|clonado|adulterado)\b"
+SUSPICIOUS_TERMS = r"\b(mentiu|batedor|fronteira|ec ruim|estado de conserva[cç][aã]o ruim|homic[ií]dio)\b"
 DELIVERY_TERMS = r"\b(entrega|entregue|local de entrega|drop|desova|repasse)\b"
 
 QUANT_PATTERN = r"(\d+[.,]?\d*)\s?(kg|g|un)\b"
@@ -75,8 +78,11 @@ def simple_norm(s: str) -> str:
 
 def rule_based_indicators(text: str) -> Dict[str, Any]:
     t = simple_norm(text)
+    # ATUALIZAÇÃO: Contagem dos novos termos
     drugs = len(re.findall(DRUG_TERMS, t, flags=re.IGNORECASE))
     weapons = len(re.findall(WEAPON_TERMS, t, flags=re.IGNORECASE))
+    theft = len(re.findall(THEFT_TERMS, t, flags=re.IGNORECASE))
+    suspicious = len(re.findall(SUSPICIOUS_TERMS, t, flags=re.IGNORECASE))
     delivery = len(re.findall(DELIVERY_TERMS, t, flags=re.IGNORECASE))
     quants = re.findall(QUANT_PATTERN, t, flags=re.IGNORECASE)
 
@@ -94,13 +100,15 @@ def rule_based_indicators(text: str) -> Dict[str, Any]:
         else:
             total_un += int(val)
 
-    # score heurístico (ajustável)
-    score = (drugs * 25) + (weapons * 25) + (delivery * 15) + min(total_kg * 10, 40) + min(total_un * 0.5, 20)
+    # ATUALIZAÇÃO: Score heurístico ajustado para incluir novos indicadores
+    score = (drugs * 25) + (weapons * 25) + (theft * 20) + (suspicious * 15) + (delivery * 15) + min(total_kg * 10, 40) + min(total_un * 0.5, 20)
     score = max(0, min(100, score))
 
     return {
         "drugs_hits": drugs,
         "weapons_hits": weapons,
+        "theft_hits": theft,
+        "suspicious_hits": suspicious,
         "delivery_hits": delivery,
         "total_kg": round(total_kg, 3),
         "total_un": total_un,
@@ -132,12 +140,10 @@ def predict_class(text: str) -> Tuple[str, float, Dict[str, Any]]:
 
     if clf is not None and lbl is not None:
         X = embed([text])
-        proba = clf.predict_proba(X)[0]  # multi-label calibrado retorna probs por classe
-        # “classe_risco” principal = argmax entre classes mapeadas (exclui OUTROS se quiser)
+        proba = clf.predict_proba(X)[0]
         idx = int(np.argmax(proba))
         classe = lbl[idx]
-        # combine com regra para formar uma pontuação final mais robusta
-        p = float(np.max(proba))  # 0..1
+        p = float(np.max(proba))
         model_score = int(round(100 * p))
         final = int(round(0.6 * model_score + 0.4 * indicators["rule_score"]))
         return classe, final, {"probas": {lbl[i]: float(proba[i]) for i in range(len(lbl))}, "indicators": indicators}
@@ -148,6 +154,8 @@ def predict_class(text: str) -> Tuple[str, float, Dict[str, Any]]:
         c = "TRAFICO"
     elif indicators["weapons_hits"] > 0:
         c = "PORTE_ARMA"
+    elif indicators["theft_hits"] > 0:
+        c = "RECEPTACAO"
     return c, indicators["rule_score"], {"probas": {}, "indicators": indicators}
 
 # =========================
