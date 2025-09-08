@@ -45,21 +45,45 @@ def humanizar_texto(texto: str) -> str:
 
 def auto_label(row) -> str:
     """
-    Classificação binária: se houver qualquer indício, é SUSPEITO.
-    Caso contrário, é SEM_ALTERACAO.
+    Classificação mais rigorosa: só é SUSPEITO se houver múltiplos indicadores.
     """
     relato = (row.get("relato") or "").lower()
 
-    # Verifica apreensões (considerado o indício mais forte)
+    # Verifica apreensões (indício forte)
     if row.get("apreensoes"):
         if any(a["tipo"] in ("Maconha", "Skunk", "Cocaina", "Crack", "Sintéticos", "Arma") for a in row["apreensoes"]):
             return "SUSPEITO"
 
-    # Verifica qualquer indício no texto do relato
-    if any(exp in relato for exp in INDICIOS_SUSPEITA):
+    # Lista de indicadores FORTES - precisam de pelo menos 2 para ser suspeito
+    indicadores_fortes = [
+        "maconha", "skunk", "cocaina", "crack", "droga", "traficante",
+        "arma", "revólver", "pistola", "munição", "fronteira",
+        "mentiu", "contradição", "nervoso", "agressivo", "entrevista ruim"
+    ]
+    
+    # Conta quantos indicadores fortes existem
+    count = sum(1 for ind in indicadores_fortes if ind in relato)
+    
+    # Palavras que NUNCA devem ser suspeitas
+    palavras_normais = [
+        "família", "férias", "trabalho", "visitar", "parentes", 
+        "documentação em ordem", "sem irregularidade", "liberado"
+    ]
+    
+    # Se tem palavras claramente normais, não é suspeito
+    if any(palavra in relato for palavra in palavras_normais):
+        return "SEM_ALTERACAO"
+    
+    # Só é suspeito se tem 2+ indicadores fortes OU 1 indicador muito específico
+    if count >= 2 or any(palavra in relato for palavra in ["traficante", "maconha", "cocaina", "crack"]):
         return "SUSPEITO"
 
-    # Se nenhum indício for encontrado
+    return "SEM_ALTERACAO"
+    
+    # Só é suspeito se tem 2+ indicadores fortes OU 1 indicador muito específico
+    if count >= 2 or any(palavra in relato for palavra in ["traficante", "maconha", "cocaina", "crack"]):
+        return "SUSPEITO"
+
     return "SEM_ALTERACAO"
 
 def fetch_training_data(limit: int | None = None):
@@ -87,6 +111,8 @@ def fetch_training_data(limit: int | None = None):
 def main():
     """Orquestra o processo de treinamento."""
     rows = fetch_training_data()
+    print(f"Carregados {len(rows)} relatos do banco")
+    print("Iniciando geração de embeddings...")
     if not rows:
         print("Nenhum dado encontrado para treinamento.")
         return

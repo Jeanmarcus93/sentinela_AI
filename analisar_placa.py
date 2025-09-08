@@ -87,7 +87,7 @@ def analisar_placa(placa: str):
             probs_route = route_clf.predict_proba(X)[0]
             risco_rota = probs_route[route_labels.index("ILICITO")] if "ILICITO" in route_labels else 0.0
             print("=" * 80)
-            print(f"📍 Análise de Rotas para {placa}")
+            print(f"🔍 Análise de Rotas para {placa}")
             for lbl, prob in zip(route_labels, probs_route):
                 print(f"  {lbl}: {prob:.2f}")
             print(f"✅ Classe escolhida: {route_labels[np.argmax(probs_route)]}")
@@ -98,18 +98,19 @@ def analisar_placa(placa: str):
     ocorrencias = fetch_ocorrencias_duplo(placa)
     if ocorrencias:
         riscos_relatos = []
-        print("\n📝 Análise de Relatos (últimos):")
+        print("\n🔍 Análise de Relatos (últimos):")
         for oc in ocorrencias:
             texto = (oc["relato"] or "").strip()
             if not texto:
                 continue
             X_text = embed([texto])
             probs_sem = sem_clf.predict_proba(X_text)[0]
-            # risco = soma de classes ilícitas
+            # risco = probabilidade da classe SUSPEITO
             risco = 0.0
             for lbl, prob in zip(sem_labels, probs_sem):
-                if lbl in ("TRAFICO", "PORTE_ARMA", "RECEPTACAO"):
-                    risco += prob
+                if lbl == "SUSPEITO":
+                    risco = prob
+                    break
             riscos_relatos.append(risco)
 
             print(f"\nRelato ID {oc['id']} ({oc['tipo']} - {oc['datahora']}):")
@@ -135,6 +136,7 @@ if __name__ == "__main__":
         if placa == "SAIR":
             break
         analisar_placa(placa)
+
 def analisar_placa_json(placa: str):
     route_clf, route_labels, sem_clf, sem_labels = carregar_modelos()
 
@@ -163,7 +165,7 @@ def analisar_placa_json(placa: str):
             X_text = embed([texto])
             probs_sem = sem_clf.predict_proba(X_text)[0]
             risco = sum(prob for lbl, prob in zip(sem_labels, probs_sem)
-                        if lbl in ("TRAFICO", "PORTE_ARMA", "RECEPTACAO"))
+                        if lbl == "SUSPEITO")
             risco_sem += risco
             resultado["relatos"].append({
                 "id": oc["id"],

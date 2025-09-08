@@ -1,19 +1,12 @@
-# requirements-nlp.txt
-
-# NLP core
-spacy==3.7.4
+flask==3.0.3
+flask-cors==4.0.0
+flask-sqlalchemy==3.1.1
+spacy==3.8.7
 yake==0.4.8
-
-# Sentence embeddings
-sentence-transformers==3.0.1
-
-# Machine Learning
+pandas==2.2.3
 scikit-learn==1.5.1
+xgboost==2.1.1
+lightgbm==4.5.0
 joblib==1.4.2
-numpy
-pandas
-
-# Tópicos (opcional, para análises mais avançadas)
-bertopic==0.16.4
-umap-learn
-hdbscan
+psycopg[binary]==3.2.9
+sentence-transformers==3.0.1
