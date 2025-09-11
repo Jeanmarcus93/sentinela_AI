@@ -1,0 +1,8 @@
+{
+  "total_samples": 50000,
+  "suspeitos": 8410,
+  "normais": 41590,
+  "suspeitos_percent": 16.82,
+  "palavras_suspeitas_count": 41,
+  "palavras_normais_count": 31
+}

@@ -1,0 +1,53 @@
+# Palavras e expressões que indicam atividade suspeita
+# Uma por linha, use # para comentários
+
+# Drogas
+maconha
+skunk
+cocaina
+crack
+droga
+pó
+erva
+entorpecente
+traficante
+trafico
+
+# Armas
+arma
+revolver
+pistola
+munição
+fuzil
+porte ilegal
+porte
+
+# Comportamento suspeito
+mentiu
+contradicao
+nervoso
+agressivo
+entrevista ruim
+não soube explicar
+historia estranha
+atitude suspeita
+comportamento hostil
+visitar tia
+EC ruim
+mentiu
+tem passagem
+tem ocorrências
+preso
+
+# Locais/situações
+fronteira
+bate volta
+madrugada
+evasão
+fuga
+
+# Dinheiro/objetos
+dinheiro em espécie
+grande quantidade
+sem justificativa
+origem duvidosa
