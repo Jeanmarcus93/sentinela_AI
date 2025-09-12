@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Análise Agregada - Sentinela IA{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* Estilos específicos da página de Análise Agregada */
+    .filter-section {
+        background: white;
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+    }
+
+    .filter-section h2 {
+        border-bottom: 2px solid #f3f4f6;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        color: #374151;
+        font-size: 1.5rem;
+    }
+
+    .filter-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .filter-form .form-group {
+        margin-bottom: 0;
+    }
+
+    .filter-form .form-input,
+    .filter-form .form-select {
+        height: 48px;
+    }
+    
+    .btn-gerar-analise {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        height: 48px;
+    }
+
+    .btn-gerar-analise:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    }
+    
+    .kpi-box {
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Análise Agregada
+        </h1>
+        <p class="text-gray-600 mt-2">Filtre e visualize padrões e inteligência de dados de forma agregada</p>
+    </div>
+
+    <!-- Filtros de Análise -->
+    <div class="filter-section">
+        <h2 class="text-xl font-semibold flex items-center gap-2">
+            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+            </svg>
+            Filtros
+        </h2>
+        <div class="filter-form">
+            <div class="form-group">
+                <label for="analise-placa" class="form-label">Placa do Veículo</label>
+                <input type="text" id="analise-placa" placeholder="Opcional: ABC1234" class="form-input uppercase" />
+            </div>
+
+            <div class="form-group custom-select-container">
+                <label for="analise-locais-select" class="form-label">Local de Entrega</label>
+                <button type="button" id="analise-locais-select" class="custom-select-button" data-target="analise-locais-options">
+                    <span class="selected-items-text">Selecione os locais...</span>
+                </button>
+                <div id="analise-locais-options" class="custom-select-options">
+                    <!-- Options will be loaded by JavaScript -->
+                    <label>Carregando...</label>
+                </div>
+            </div>
+
+            <div class="form-group custom-select-container">
+                <label for="analise-apreensoes-select" class="form-label">Tipos de Apreensão</label>
+                <button type="button" id="analise-apreensoes-select" class="custom-select-button" data-target="analise-apreensoes-options">
+                    <span class="selected-items-text">Selecione os tipos...</span>
+                </button>
+                <div id="analise-apreensoes-options" class="custom-select-options">
+                    <!-- Options will be loaded by JavaScript -->
+                    <label>Carregando...</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="analise-data-inicio" class="form-label">Data de Início</label>
+                <input type="date" id="analise-data-inicio" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label for="analise-data-fim" class="form-label">Data de Fim</label>
+                <input type="date" id="analise-data-fim" class="form-input" />
+            </div>
+            
+            <div class="form-group self-end">
+                <button type="button" id="analise-btn-gerar" class="btn-gerar-analise w-full">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    Gerar Análise
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados da Análise -->
+    <div id="analise-resultados">
+        <!-- Initial empty state -->
+        <div class="empty-state">
+            <svg class="empty-state-icon text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-700">Aguardando geração da análise</h3>
+            <p class="text-gray-500 mt-2">Selecione os filtros e clique em 'Gerar Análise' para começar</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/components/analise.js') }}"></script>
+{% endblock %}
