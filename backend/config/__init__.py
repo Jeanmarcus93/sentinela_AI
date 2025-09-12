@@ -8,6 +8,8 @@ import os
 import json
 from typing import Dict, Any, Optional
 from pathlib import Path
+import logging
+import logging.config
 
 # =============================================================================
 # CONFIGURAÇÕES DE AMBIENTE
@@ -226,8 +228,6 @@ class LoggingConfig:
     
     def setup_logging(self):
         """Configura o sistema de logging"""
-        import logging.config
-        
         # Criar diretório de logs se não existir
         os.makedirs('logs', exist_ok=True)
         
@@ -246,11 +246,11 @@ def initialize_system() -> SystemConfig:
     logging_config = LoggingConfig(config)
     logger = logging_config.setup_logging()
     
-    logger.info("🚀 Iniciando Sistema de Análise de Placas")
-    logger.info(f"📊 Ambiente: {config.flask['ENV']}")
-    logger.info(f"🔧 Debug: {config.flask['DEBUG']}")
-    logger.info(f"🗄️ Banco principal: {config.database['NAME']}@{config.database['HOST']}")
-    logger.info(f"🚗 Banco veículos: {config.veiculos_database['NAME']}@{config.veiculos_database['HOST']}")
+    logger.info("Iniciando Sistema de Análise de Placas")
+    logger.info(f"Ambiente: {config.flask['ENV']}")
+    logger.info(f"Debug: {config.flask['DEBUG']}")
+    logger.info(f"Banco principal: {config.database['NAME']}@{config.database['HOST']}")
+    logger.info(f"Banco veículos: {config.veiculos_database['NAME']}@{config.veiculos_database['HOST']}")
     
     return config
 
@@ -355,10 +355,11 @@ __version__ = "2.0.0"
 __description__ = "Sistema de Análise de Placas com Agentes Especializados"
 __author__ = "Equipe de Desenvolvimento"
 
-print(f"📦 Config module loaded - v{__version__}")
-print(f"📋 {__description__}")
+print("Settings module loaded successfully")
+print(f"Config module loaded - v{__version__}")
+print(f"Sistema de Análise de Placas com Agentes Especializados")
 
 # Inicialização automática em modo de desenvolvimento
 if os.getenv('FLASK_ENV', 'development') == 'development':
-    print("🔧 Modo de desenvolvimento detectado - configuração carregada automaticamente")
+    print("Modo de desenvolvimento detectado - configuração carregada automaticamente")
     config = get_config()

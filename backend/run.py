@@ -136,7 +136,7 @@ if __name__ == '__main__':
         print("✅ Tabelas verificadas/criadas com sucesso!")
         
         # 2. Migrar apreensões (mantendo funcionalidade original)  
-        migrar_apreensoes_para_tabela_normalizada()
+        # migrar_apreensoes_para_tabela_normalizada()
         
         # 3. Inicializar sistema de agentes (nova funcionalidade)
         sistema_agentes_ok = inicializar_sistema_agentes()
