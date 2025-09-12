@@ -1,0 +1,84 @@
+# ==============================================
+# CONFIGURAÇÕES DO SISTEMA SENTINELA IA
+# ==============================================
+
+# ----------------------------------------------
+# BANCO DE DADOS PRINCIPAL
+# ----------------------------------------------
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=sentinela_teste
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+
+# ----------------------------------------------
+# BANCO DE DADOS DE VEÍCULOS (OPCIONAL)
+# ----------------------------------------------
+VEICULOS_DB_HOST=localhost
+VEICULOS_DB_PORT=5432
+VEICULOS_DB_NAME=veiculos_db
+VEICULOS_DB_USER=postgres
+VEICULOS_DB_PASSWORD=sua_senha_aqui
+
+# ----------------------------------------------
+# CONFIGURAÇÕES DO FLASK
+# ----------------------------------------------
+FLASK_ENV=development
+FLASK_DEBUG=True
+SECRET_KEY=mude_esta_chave_secreta_em_producao
+
+# ----------------------------------------------
+# MODELOS DE MACHINE LEARNING
+# ----------------------------------------------
+# Modelo spaCy para português (opções: pt_core_news_sm, pt_core_news_lg)
+SPACY_PT_MODEL=pt_core_news_sm
+
+# Modelo de embeddings semânticos
+SENTENCE_EMB_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+
+# ----------------------------------------------
+# CONFIGURAÇÕES DE PERFORMANCE
+# ----------------------------------------------
+# Número máximo de threads para ML
+ML_MAX_WORKERS=4
+
+# Cache de embeddings (em minutos)
+EMBEDDINGS_CACHE_TTL=60
+
+# ----------------------------------------------
+# CONFIGURAÇÕES DE LOGGING
+# ----------------------------------------------
+LOG_LEVEL=INFO
+LOG_FILE=logs/sentinela.log
+
+# ----------------------------------------------
+# CONFIGURAÇÕES DE SEGURANÇA
+# ----------------------------------------------
+# Permitir CORS para desenvolvimento (True/False)
+ENABLE_CORS=True
+
+# IPs permitidos para acesso à API (separados por vírgula)
+ALLOWED_IPS=127.0.0.1,localhost
+
+# ----------------------------------------------
+# CONFIGURAÇÕES DOS AGENTES (v2.0)
+# ----------------------------------------------
+# Habilitar sistema de agentes especializados
+ENABLE_AGENTS_SYSTEM=True
+
+# Número máximo de tarefas simultâneas por agente
+AGENT_MAX_CONCURRENT_TASKS=5
+
+# Timeout padrão para tarefas de agentes (segundos)
+AGENT_DEFAULT_TIMEOUT=30
+
+# ----------------------------------------------
+# EXEMPLO DE CONFIGURAÇÃO PARA PRODUÇÃO
+# ----------------------------------------------
+# FLASK_ENV=production
+# FLASK_DEBUG=False
+# DB_HOST=seu-servidor-db.com
+# DB_PASSWORD=senha_super_segura
+# SECRET_KEY=chave_aleatoria_muito_longa_e_segura
+# LOG_LEVEL=WARNING
+# ENABLE_CORS=False

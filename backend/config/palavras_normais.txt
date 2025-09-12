@@ -1,0 +1,119 @@
+# Palavras e expressões que indicam situações normais
+# Uma por linha, use # para comentários
+# Estas palavras REDUZEM o score de suspeição
+
+# Família e relacionamentos
+família
+familia
+ferias
+férias
+parentes
+visitar
+passeando
+viagem
+turismo
+casamento
+aniversário
+funeral
+velório
+batizado
+formatura
+
+# Trabalho
+trabalho
+emprego
+serviço
+empresa
+reuniao
+reunião
+cliente
+negócios
+entrega
+comercial
+profissional
+funcionário
+motorista
+representante
+vendedor
+
+# Situações cotidianas
+documentação em ordem
+sem irregularidade
+liberado
+rotina
+normal
+regular
+conforme
+adequado
+correto
+em dia
+tudo certo
+sem problemas
+cooperativo
+educado
+prestativo
+cordial
+respeitoso
+colaborou
+
+# Emergências/problemas mecânicos
+pane
+quebrou
+problema mecânico
+socorro
+emergência
+hospital
+médico
+consulta
+tratamento
+urgência
+defeito
+manutenção
+combustível
+pneu furado
+
+# Atividades legítimas
+compras
+mercado
+posto
+abastecimento
+pagamento
+banco
+cartório
+repartição pública
+escola
+faculdade
+igreja
+festa
+evento
+show
+esporte
+
+# Cooperação com autoridades
+colaborativo
+prestativo
+educado
+cordial
+respeitoso
+atencioso
+solícito
+transparente
+honesto
+verdadeiro
+esclareceu
+explicou
+demonstrou
+apresentou documentos
+
+# Justificativas plausíveis
+mudança
+mudança de cidade
+novo emprego
+estudos
+curso
+tratamento médico
+visita médica
+acompanhar familiar
+buscar familiar
+levar ao aeroporto
+buscar no aeroporto
