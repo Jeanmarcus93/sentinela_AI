@@ -14,7 +14,10 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Adicionar o diretório raiz do backend ao sys.path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
+
 from app.models.database import DB_CONFIG
 from app.services.semantic_service import embed, CLF_PATH, LBL_PATH
 

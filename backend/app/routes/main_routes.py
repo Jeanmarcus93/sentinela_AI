@@ -1,5 +1,5 @@
-# routes.py
-from flask import Blueprint, jsonify, render_template, request
+# routes.py - VERSÃO CORRIGIDA PARA ARQUITETURA API
+from flask import Blueprint, jsonify, request
 from datetime import datetime, date
 import re
 import json
@@ -52,26 +52,44 @@ def fetch_and_attach_details(cur, ocorrencias):
         
     return ocorrencias
 
+# --- ROTAS CONVERTIDAS PARA API ---
 
-# --- Rotas para renderizar as páginas ---
 @main_bp.route('/')
-@main_bp.route('/consulta')
-def consulta():
-    return render_template('consulta.html')
+def root():
+    """Rota raiz - retorna informações da API"""
+    return jsonify({
+        "message": "Sentinela IA Backend API",
+        "version": "2.0.0", 
+        "frontend": "http://localhost:3000",
+        "endpoints": {
+            "consulta_placa": "/api/consulta_placa/<placa>",
+            "consulta_cpf": "/api/consulta_cpf/<cpf>",
+            "municipios": "/api/municipios",
+            "health": "/api/health",
+            "info": "/api/info"
+        }
+    })
 
-@main_bp.route('/nova_ocorrencia')
-def nova_ocorrencia():
-    return render_template('nova_ocorrencia.html')
+@main_bp.route('/api/health')
+def api_health():
+    """Endpoint de saúde da API"""
+    try:
+        # Testar conexão com banco
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                db_status = "ok"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return jsonify({
+        "status": "ok" if db_status == "ok" else "degraded",
+        "database": db_status,
+        "timestamp": datetime.now().isoformat(),
+        "version": "2.0.0"
+    })
 
-@main_bp.route('/analise')
-def analise():
-    return render_template('analise.html')
-
-@main_bp.route('/analise_IA')
-def analise_IA():
-    return render_template('analise_IA.html')
-
-# --- Rotas de API ---
+# --- Rotas de API existentes mantidas ---
 @main_bp.route('/api/municipios')
 def api_get_municipios():
     try:

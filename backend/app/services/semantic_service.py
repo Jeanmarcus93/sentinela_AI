@@ -752,3 +752,75 @@ if __name__ == "__main__":
     
     print(f"\n🎉 Sistema de Análise Semântica pronto!")
     print(f"📊 Use analyze_text(relato) para análise completa")
+
+def load_yake():
+    """Carrega extrator de palavras-chave YAKE com proteção contra erros"""
+    global _yake
+    if _yake is None:
+        try:
+            _yake = yake.KeywordExtractor(
+                lan="pt", 
+                n=3,  # até 3-gramas
+                top=20, 
+                windowsSize=3, 
+                dedupLim=0.7,
+                features=["tf", "upfreq", "dist", "position"]
+            )
+            print("✅ YAKE extractor carregado")
+        except Exception as e:
+            print(f"⚠️ Erro ao inicializar YAKE: {e}")
+            _yake = None
+    return _yake
+
+def extract_keywords_safe(text):
+    """Extrai palavras-chave com proteção contra erros"""
+    if not text or len(text.strip()) < 10:
+        return []
+    
+    try:
+        yake_extractor = load_yake()
+        if yake_extractor is None:
+            return []
+        
+        keywords = yake_extractor.extract_keywords(text)
+        return [kw[1] for kw in keywords[:10]]  # Top 10 keywords
+    except ZeroDivisionError:
+        print("⚠️ YAKE erro de divisão por zero - texto muito curto")
+        return []
+    except Exception as e:
+        print(f"⚠️ Erro na extração de keywords: {e}")
+        return []
+    
+# Adicione esta função no semantic_service.py
+
+def safe_extract_keywords(text):
+    """Extrai palavras-chave com proteção total contra erros"""
+    # Validação de entrada
+    if not text or not isinstance(text, str):
+        return []
+    
+    # Limpar e validar texto
+    text = text.strip()
+    if len(text) < 20:  # Texto muito curto
+        return []
+    
+    # Verificar se tem conteúdo significativo
+    words = text.split()
+    if len(words) < 5:  # Muito poucas palavras
+        return []
+    
+    try:
+        yake_extractor = load_yake()
+        if yake_extractor is None:
+            return []
+        
+        # Tentar extrair keywords
+        keywords = yake_extractor.extract_keywords(text)
+        return [kw[1] for kw in keywords[:10] if kw[0] > 0]  # Filtrar scores inválidos
+        
+    except (ZeroDivisionError, ValueError, AttributeError) as e:
+        print(f"⚠️ YAKE erro protegido: {type(e).__name__}")
+        return []
+    except Exception as e:
+        print(f"⚠️ Erro inesperado no YAKE: {e}")
+        return []

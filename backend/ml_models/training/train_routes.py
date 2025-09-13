@@ -11,6 +11,11 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.metrics import classification_report
 
+# Adicionar o diretório raiz do backend ao sys.path
+# Isso permite que o script encontre o módulo 'app'
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
+
 # ========= Configurações de segmentação/curta duração =========
 GAP_HOURS_NEW_TRIP = 4.0             # gap >= 4h separa viagens
 SHORT_TRIP_MAX_HOURS = 3.0           # viagem curta: duração <= 3h
@@ -19,10 +24,9 @@ NIGHT_START = 22                     # noite: 20:00
 NIGHT_END = 6                        # até 06:00
 
 # ========= Caminhos/DB =========
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.models.database import DB_CONFIG  # noqa: E402
 
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "trained")
 os.makedirs(MODELS_DIR, exist_ok=True)
 CLF_PATH = os.path.join(MODELS_DIR, "routes_clf.joblib")
 LBL_PATH = os.path.join(MODELS_DIR, "routes_labels.joblib")
