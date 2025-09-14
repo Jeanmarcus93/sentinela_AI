@@ -82,3 +82,14 @@ AGENT_DEFAULT_TIMEOUT=30
 # SECRET_KEY=chave_aleatoria_muito_longa_e_segura
 # LOG_LEVEL=WARNING
 # ENABLE_CORS=False
+
+# Adicionar ao arquivo .env
+SPACY_PT_MODEL=pt_core_news_sm
+SENTENCE_EMB_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+ENABLE_AGENTS_SYSTEM=True
+SEMANTIC_PRESET=balanced
+
+# Definir no .env
+SEMANTIC_PRESET=high_precision
+SEMANTIC_SUSPICION_THRESHOLD=0.6
+SEMANTIC_MAX_CONCURRENT=8

@@ -1,28 +1,1286 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentinela IA</title>
+    <title>Consulta de Placas - Sentinela IA</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        .nav { background: #007bff; padding: 1rem; }
-        .nav a { color: white; text-decoration: none; margin-right: 20px; padding: 10px; }
-        .nav a:hover { background: rgba(255,255,255,0.1); }
-        main { padding: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #4a5568;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #667eea;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Title Section */
+        .page-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-title p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Search Section */
+        .search-section {
+            text-align: center;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .input-group {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .placa-input {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1rem;
+            font-size: 1.2rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .placa-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .placa-input.valid {
+            border-color: #48bb78;
+        }
+
+        .placa-input.invalid {
+            border-color: #f56565;
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #a0aec0;
+            transition: color 0.3s;
+        }
+
+        .clear-btn:hover {
+            color: #667eea;
+        }
+
+        .validation-message {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .validation-message.valid {
+            color: #48bb78;
+        }
+
+        .validation-message.invalid {
+            color: #f56565;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Quick Search Options */
+        .quick-options {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .quick-options h3 {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+
+        .option-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        /* Recent Searches */
+        .recent-searches {
+            margin-top: 2rem;
+        }
+
+        .recent-searches h3 {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+
+        .recent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            background: #f7fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .recent-placa {
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .recent-time {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .results-header h2 {
+            color: #2d3748;
+        }
+
+        .export-btn {
+            background: #48bb78;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background: #38a169;
+        }
+
+        .result-tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-card h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-card p {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-regular {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-alert {
+            background: #fed7cc;
+            color: #c53030;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: #48bb78;
+        }
+
+        .toast.error {
+            background: #f56565;
+        }
+
+        .toast.info {
+            background: #667eea;
+        }
+
+        /* Loading Animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            .page-title h1 {
+                font-size: 2rem;
+            }
+
+            .option-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .results-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav class="nav">
-        <a href="#consulta">Consulta de Placas</a>
-        <a href="#nova-ocorrencia">Nova Ocorrência</a>
-        <a href="#analise">Análise de Dados</a>
-        <a href="#analise-ia">Análise com IA</a>
-    </nav>
-    
-    <main id="main-content">
-        <h1>Sentinela IA</h1>
-        <p>Sistema de Análise de Placas - Clique nos links acima para navegar</p>
-    </main>
+    <!-- Header -->
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo">🛡️ Sentinela IA</div>
+            <div class="nav-links">
+                <a href="#consulta" class="nav-link active">Consulta de Placas</a>
+                <a href="#nova-ocorrencia" class="nav-link">Nova Ocorrência</a>
+                <a href="#analise" class="nav-link">Análise de Dados</a>
+                <a href="#analise-ia" class="nav-link">Análise com IA</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Title Section -->
+        <div class="page-title">
+            <h1>Consulta de Placas</h1>
+            <p>Sistema completo de consulta e análise de veículos</p>
+        </div>
+
+        <!-- Search Section -->
+        <div class="card search-section">
+            <form class="search-form" id="searchForm">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="placa-input" 
+                        id="placaInput" 
+                        placeholder="ABC1234 ou ABC1D23"
+                        maxlength="8"
+                        autocomplete="off"
+                    >
+                    <button type="button" class="clear-btn" id="clearBtn" style="display: none;">×</button>
+                </div>
+                <div class="validation-message" id="validationMessage"></div>
+                
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                    <button type="submit" class="btn btn-primary" id="searchBtn">
+                        <span class="search-icon">🔍</span>
+                        Consultar Placa
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="advancedBtn">
+                        ⚙️ Busca Avançada
+                    </button>
+                </div>
+            </form>
+
+            <!-- Quick Options -->
+            <div class="quick-options">
+                <h3>Opções Rápidas</h3>
+                <div class="option-buttons">
+                    <button class="btn btn-secondary" onclick="showHistorico()">📋 Histórico</button>
+                    <button class="btn btn-secondary" onclick="showFavoritos()">⭐ Favoritos</button>
+                    <button class="btn btn-secondary" onclick="showEstatisticas()">📊 Estatísticas</button>
+                    <button class="btn btn-secondary" onclick="showRelatorio()">📄 Relatório</button>
+                </div>
+            </div>
+
+            <!-- Recent Searches -->
+            <div class="recent-searches" id="recentSearches" style="display: none;">
+                <h3>Consultas Recentes</h3>
+                <div id="recentList">
+                    <div class="recent-item">
+                        <span class="recent-placa">ABC1234</span>
+                        <span class="recent-time">Há 5 minutos</span>
+                    </div>
+                    <div class="recent-item">
+                        <span class="recent-placa">XYZ5678</span>
+                        <span class="recent-time">Há 2 horas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card results-section" id="resultsSection">
+            <div class="results-header">
+                <h2>Resultados da Consulta</h2>
+                <button class="btn export-btn" onclick="exportResults()">📤 Exportar</button>
+            </div>
+
+            <!-- Result Tabs -->
+            <div class="result-tabs">
+                <button class="tab active" onclick="showTab('info')">📋 Informações</button>
+                <button class="tab" onclick="showTab('historico')">📚 Histórico</button>
+                <button class="tab" onclick="showTab('analise')">🔍 Análise</button>
+                <button class="tab" onclick="showTab('ia')">🤖 IA</button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="tab-content active" id="info-tab">
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h4>🚗 Dados do Veículo</h4>
+                        <p><strong>Placa:</strong> <span id="placaResult">-</span></p>
+                        <p><strong>Modelo:</strong> <span id="modeloResult">-</span></p>
+                        <p><strong>Cor:</strong> <span id="corResult">-</span></p>
+                        <p><strong>Ano:</strong> <span id="anoResult">-</span></p>
+                        <p><strong>Status:</strong> <span class="status-badge status-regular" id="statusResult">Regular</span></p>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>👤 Proprietário</h4>
+                        <p><strong>Nome:</strong> <span id="nomeResult">-</span></p>
+                        <p><strong>CPF:</strong> <span id="cpfResult">-</span></p>
+                        <p><strong>Cidade:</strong> <span id="cidadeResult">-</span></p>
+                        <p><strong>UF:</strong> <span id="ufResult">-</span></p>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>📊 Estatísticas</h4>
+                        <p><strong>Consultas:</strong> <span id="consultasResult">0</span></p>
+                        <p><strong>Última consulta:</strong> <span id="ultimaConsultaResult">-</span></p>
+                        <p><strong>Ocorrências:</strong> <span id="ocorrenciasResult">0</span></p>
+                        <p><strong>Score de risco:</strong> <span id="riscorResult">Baixo</span></p>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>⚠️ Alertas</h4>
+                        <p><strong>Pendências:</strong> <span id="pendenciasResult">Nenhuma</span></p>
+                        <p><strong>Multas:</strong> <span id="multasResult">0</span></p>
+                        <p><strong>IPVA:</strong> <span id="ipvaResult">Em dia</span></p>
+                        <p><strong>Seguro:</strong> <span id="seguroResult">Ativo</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="historico-tab">
+                <p>Histórico de ocorrências e consultas será exibido aqui...</p>
+            </div>
+
+            <div class="tab-content" id="analise-tab">
+                <p>Análise detalhada dos dados será exibida aqui...</p>
+            </div>
+
+            <div class="tab-content" id="ia-tab">
+                <p>Análise com IA será exibida aqui...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script>
+        // ========================================
+        // ===== VARIABLES AND INITIALIZATION ====
+        // ========================================
+        
+        let recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        
+        // DOM Elements
+        const placaInput = document.getElementById('placaInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const validationMessage = document.getElementById('validationMessage');
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsSection = document.getElementById('resultsSection');
+
+        // ========================================
+        // ===== PLACA VALIDATION ===============
+        // ========================================
+        
+        function validatePlaca(placa) {
+            if (!placa) return { valid: false, message: '' };
+            
+            const cleaned = placa.replace(/[^A-Z0-9]/g, '');
+            
+            // Formato antigo: ABC1234
+            const oldFormat = /^[A-Z]{3}\d{4}$/.test(cleaned);
+            // Formato Mercosul: ABC1D23
+            const mercosulFormat = /^[A-Z]{3}\d[A-Z]\d{2}$/.test(cleaned);
+            
+            if (oldFormat || mercosulFormat) {
+                return { valid: true, message: 'Formato válido' };
+            } else if (cleaned.length < 7) {
+                return { valid: false, message: 'Placa incompleta' };
+            } else {
+                return { valid: false, message: 'Formato inválido (ex: ABC1234 ou ABC1D23)' };
+            }
+        }
+
+        function formatPlaca(placa) {
+            const cleaned = placa.replace(/[^A-Z0-9]/g, '');
+            if (cleaned.length >= 3) {
+                if (cleaned.length <= 7) {
+                    // Formato antigo
+                    return cleaned.replace(/^([A-Z]{3})(\d{1,4})/, '$1-$2');
+                } else {
+                    // Formato Mercosul
+                    return cleaned.replace(/^([A-Z]{3})(\d[A-Z]\d{2})/, '$1-$2');
+                }
+            }
+            return cleaned;
+        }
+
+        // ========================================
+        // ===== EVENT LISTENERS ================
+        // ========================================
+        
+        placaInput.addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            if (value.length > 7) {
+                value = value.substring(0, 8);
+            }
+            
+            e.target.value = value;
+            
+            const validation = validatePlaca(value);
+            
+            // Update input appearance
+            placaInput.classList.remove('valid', 'invalid');
+            if (value) {
+                placaInput.classList.add(validation.valid ? 'valid' : 'invalid');
+            }
+            
+            // Update validation message
+            validationMessage.textContent = validation.message;
+            validationMessage.classList.remove('valid', 'invalid');
+            if (validation.message) {
+                validationMessage.classList.add(validation.valid ? 'valid' : 'invalid');
+            }
+            
+            // Show/hide clear button
+            clearBtn.style.display = value ? 'block' : 'none';
+            
+            // Enable/disable search button
+            searchBtn.disabled = !validation.valid;
+        });
+
+        clearBtn.addEventListener('click', function() {
+            placaInput.value = '';
+            placaInput.classList.remove('valid', 'invalid');
+            validationMessage.textContent = '';
+            validationMessage.classList.remove('valid', 'invalid');
+            clearBtn.style.display = 'none';
+            searchBtn.disabled = true;
+            placaInput.focus();
+        });
+
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const placa = placaInput.value.trim();
+            if (validatePlaca(placa).valid) {
+                performSearch(placa);
+            }
+        });
+
+        // ========================================
+        // ===== SEARCH FUNCTIONALITY ===========
+        // ========================================
+        
+        async function performSearch(placa) {
+            try {
+                // Update button state
+                const originalBtnContent = searchBtn.innerHTML;
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '<div class="spinner"></div> Consultando...';
+                
+                // Add to recent searches
+                addToRecentSearches(placa);
+                
+                // Simulate API call (replace with actual API call)
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Mock data (replace with actual API response)
+                const mockData = {
+                    placa: formatPlaca(placa),
+                    modelo: 'Honda Civic 2.0',
+                    cor: 'Prata',
+                    ano: '2020',
+                    nome: 'João Silva Santos',
+                    cpf: '***.***.***-**',
+                    cidade: 'São Paulo',
+                    uf: 'SP',
+                    consultas: Math.floor(Math.random() * 50) + 1,
+                    ultimaConsulta: 'Hoje, 14:30',
+                    ocorrencias: Math.floor(Math.random() * 3),
+                    risco: ['Baixo', 'Médio', 'Alto'][Math.floor(Math.random() * 3)]
+                };
+                
+                displayResults(mockData);
+                showToast('Consulta realizada com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro na consulta:', error);
+                showToast('Erro ao realizar consulta. Tente novamente.', 'error');
+            } finally {
+                // Restore button state
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = originalBtnContent;
+            }
+        }
+
+        function displayResults(data) {
+            // Update result fields
+            document.getElementById('placaResult').textContent = data.placa;
+            document.getElementById('modeloResult').textContent = data.modelo;
+            document.getElementById('corResult').textContent = data.cor;
+            document.getElementById('anoResult').textContent = data.ano;
+            document.getElementById('nomeResult').textContent = data.nome;
+            document.getElementById('cpfResult').textContent = data.cpf;
+            document.getElementById('cidadeResult').textContent = data.cidade;
+            document.getElementById('ufResult').textContent = data.uf;
+            document.getElementById('consultasResult').textContent = data.consultas;
+            document.getElementById('ultimaConsultaResult').textContent = data.ultimaConsulta;
+            document.getElementById('ocorrenciasResult').textContent = data.ocorrencias;
+            document.getElementById('riscorResult').textContent = data.risco;
+            
+            // Update status badge
+            const statusBadge = document.getElementById('statusResult');
+            statusBadge.textContent = data.ocorrencias > 0 ? 'Com Ocorrências' : 'Regular';
+            statusBadge.className = `status-badge ${data.ocorrencias > 0 ? 'status-alert' : 'status-regular'}`;
+            
+            // Show results section
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ========================================
+        // ===== TAB FUNCTIONALITY ==============
+        // ========================================
+        
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // ========================================
+        // ===== UTILITY FUNCTIONS ==============
+        // ========================================
+        
+        function addToRecentSearches(placa) {
+            const formattedPlaca = formatPlaca(placa);
+            const searchItem = {
+                placa: formattedPlaca,
+                timestamp: new Date().toISOString(),
+                displayTime: 'Agora'
+            };
+            
+            // Remove if already exists
+            recentSearches = recentSearches.filter(item => item.placa !== formattedPlaca);
+            
+            // Add to beginning
+            recentSearches.unshift(searchItem);
+            
+            // Keep only last 10
+            recentSearches = recentSearches.slice(0, 10);
+            
+            // Save to localStorage
+            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+            
+            // Update display
+            updateRecentSearchesDisplay();
+        }
+
+        function updateRecentSearchesDisplay() {
+            const recentSearchesDiv = document.getElementById('recentSearches');
+            const recentList = document.getElementById('recentList');
+            
+            if (recentSearches.length > 0) {
+                recentSearchesDiv.style.display = 'block';
+                recentList.innerHTML = recentSearches.map(item => `
+                    <div class="recent-item">
+                        <span class="recent-placa" onclick="searchRecentPlaca('${item.placa}')">${item.placa}</span>
+                        <span class="recent-time">${item.displayTime}</span>
+                    </div>
+                `).join('');
+            } else {
+                recentSearchesDiv.style.display = 'none';
+            }
+        }
+
+        function searchRecentPlaca(placa) {
+            placaInput.value = placa.replace('-', '');
+            const event = new Event('input');
+            placaInput.dispatchEvent(event);
+            performSearch(placa.replace('-', ''));
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ========================================
+        // ===== QUICK ACTIONS ==================
+        // ========================================
+        
+        function showHistorico() {
+            showToast('Carregando histórico completo...', 'info');
+            // Implementation here
+        }
+
+        function showFavoritos() {
+            showToast('Carregando placas favoritas...', 'info');
+            // Implementation here
+        }
+
+        function showEstatisticas() {
+            showToast('Gerando estatísticas...', 'info');
+            // Implementation here
+        }
+
+        function showRelatorio() {
+            showToast('Preparando relatório...', 'info');
+            // Implementation here
+        }
+
+        function exportResults() {
+            showToast('Exportando resultados...', 'success');
+            // Implementation here
+        }
+
+        // ========================================
+        // ===== INITIALIZATION =================
+        // ========================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateRecentSearchesDisplay();
+            placaInput.focus();
+            
+            // Update recent searches time display
+            setInterval(() => {
+                updateRecentSearchesTimeDisplay();
+            }, 60000); // Update every minute
+        });
+
+        function updateRecentSearchesTimeDisplay() {
+            recentSearches.forEach((item, index) => {
+                const now = new Date();
+                const searchTime = new Date(item.timestamp);
+                const diffMinutes = Math.floor((now - searchTime) / (1000 * 60));
+                
+                if (diffMinutes < 1) {
+                    item.displayTime = 'Agora';
+                } else if (diffMinutes < 60) {
+                    item.displayTime = `Há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+                } else if (diffMinutes < 1440) {
+                    const hours = Math.floor(diffMinutes / 60);
+                    item.displayTime = `Há ${hours} hora${hours > 1 ? 's' : ''}`;
+                } else {
+                    const days = Math.floor(diffMinutes / 1440);
+                    item.displayTime = `Há ${days} dia${days > 1 ? 's' : ''}`;
+                }
+            });
+            
+            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+            updateRecentSearchesDisplay();
+        }
+
+        // ========================================
+        // ===== ADVANCED SEARCH MODAL ==========
+        // ========================================
+        
+        document.getElementById('advancedBtn').addEventListener('click', function() {
+            showAdvancedSearch();
+        });
+
+        function showAdvancedSearch() {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2 style="margin: 0; color: #2d3748;">🔍 Busca Avançada</h2>
+                            <button onclick="this.closest('div').parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                        </div>
+                        
+                        <form id="advancedSearchForm">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Placa:</label>
+                                <input type="text" id="advPlaca" class="placa-input" placeholder="ABC1234 ou ABC1D23" style="width: 100%;">
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">CPF do Proprietário:</label>
+                                <input type="text" id="advCpf" placeholder="000.000.000-00" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nome do Proprietário:</label>
+                                <input type="text" id="advNome" placeholder="João Silva" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Cidade:</label>
+                                    <input type="text" id="advCidade" placeholder="São Paulo" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">UF:</label>
+                                    <select id="advUf" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                        <option value="">Todos</option>
+                                        <option value="SP">SP</option>
+                                        <option value="RJ">RJ</option>
+                                        <option value="MG">MG</option>
+                                        <option value="RS">RS</option>
+                                        <option value="PR">PR</option>
+                                        <option value="SC">SC</option>
+                                        <!-- Add more states -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Período de Consulta:</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <input type="date" id="advDataInicio" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                    <input type="date" id="advDataFim" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Filtros:</label>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroOcorrencias"> Com ocorrências
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroMultas"> Com multas
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroRisco"> Alto risco
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                                <button type="button" onclick="this.closest('div').parentElement.remove()" style="padding: 0.8rem 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                                    Cancelar
+                                </button>
+                                <button type="submit" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                    🔍 Buscar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Handle advanced search form
+            document.getElementById('advancedSearchForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                performAdvancedSearch();
+                modal.remove();
+            });
+        }
+
+        function performAdvancedSearch() {
+            const formData = {
+                placa: document.getElementById('advPlaca').value,
+                cpf: document.getElementById('advCpf').value,
+                nome: document.getElementById('advNome').value,
+                cidade: document.getElementById('advCidade').value,
+                uf: document.getElementById('advUf').value,
+                dataInicio: document.getElementById('advDataInicio').value,
+                dataFim: document.getElementById('advDataFim').value,
+                filtros: {
+                    ocorrencias: document.getElementById('filtroOcorrencias').checked,
+                    multas: document.getElementById('filtroMultas').checked,
+                    risco: document.getElementById('filtroRisco').checked
+                }
+            };
+            
+            showToast('Realizando busca avançada...', 'info');
+            
+            // Simulate advanced search
+            setTimeout(() => {
+                showAdvancedResults(formData);
+            }, 2000);
+        }
+
+        function showAdvancedResults(searchData) {
+            // Mock advanced search results
+            const results = [
+                {
+                    placa: 'ABC1234',
+                    proprietario: 'João Silva',
+                    cidade: 'São Paulo',
+                    ocorrencias: 2,
+                    ultimaConsulta: '2024-01-15'
+                },
+                {
+                    placa: 'XYZ5678',
+                    proprietario: 'Maria Santos',
+                    cidade: 'Rio de Janeiro', 
+                    ocorrencias: 0,
+                    ultimaConsulta: '2024-01-10'
+                }
+            ];
+            
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 2rem; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2 style="margin: 0; color: #2d3748;">📋 Resultados da Busca Avançada</h2>
+                            <button onclick="this.closest('div').parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <p><strong>Encontrados:</strong> ${results.length} resultado(s)</p>
+                        </div>
+                        
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${results.map(result => `
+                                <div style="background: #f7fafc; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid ${result.ocorrencias > 0 ? '#f56565' : '#48bb78'};">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                        <div><strong>Placa:</strong> ${result.placa}</div>
+                                        <div><strong>Proprietário:</strong> ${result.proprietario}</div>
+                                        <div><strong>Cidade:</strong> ${result.cidade}</div>
+                                        <div><strong>Ocorrências:</strong> <span style="color: ${result.ocorrencias > 0 ? '#c53030' : '#22543d'}">${result.ocorrencias}</span></div>
+                                    </div>
+                                    <div style="margin-top: 1rem;">
+                                        <button onclick="searchRecentPlaca('${result.placa}')" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
+                                            Ver Detalhes
+                                        </button>
+                                        <button onclick="addToFavorites('${result.placa}')" style="padding: 0.5rem 1rem; background: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                            ⭐ Favoritar
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="margin-top: 2rem; text-align: center;">
+                            <button onclick="exportAdvancedResults()" style="padding: 0.8rem 1.5rem; background: #48bb78; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 1rem;">
+                                📤 Exportar Resultados
+                            </button>
+                            <button onclick="this.closest('div').parentElement.remove()" style="padding: 0.8rem 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.querySelector('div').remove = () => modal.remove();
+        }
+
+        function addToFavorites(placa) {
+            if (!favorites.includes(placa)) {
+                favorites.push(placa);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                showToast(`Placa ${placa} adicionada aos favoritos!`, 'success');
+            } else {
+                showToast(`Placa ${placa} já está nos favoritos!`, 'info');
+            }
+        }
+
+        function exportAdvancedResults() {
+            showToast('Exportando resultados da busca avançada...', 'success');
+            // Implementation for export functionality
+        }
+
+        // ========================================
+        // ===== KEYBOARD SHORTCUTS =============
+        // ========================================
+        
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                placaInput.focus();
+                placaInput.select();
+            }
+            
+            // Ctrl/Cmd + Shift + F for advanced search
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+                e.preventDefault();
+                showAdvancedSearch();
+            }
+            
+            // ESC to clear search
+            if (e.key === 'Escape' && document.activeElement === placaInput) {
+                clearBtn.click();
+            }
+        });
+
+        // ========================================
+        // ===== ACCESSIBILITY FEATURES =========
+        // ========================================
+        
+        // ARIA labels and keyboard navigation
+        placaInput.setAttribute('aria-describedby', 'validationMessage');
+        placaInput.setAttribute('aria-label', 'Digite a placa do veículo');
+        
+        // Voice search (if supported)
+        if ('webkitSpeechRecognition' in window) {
+            const voiceBtn = document.createElement('button');
+            voiceBtn.innerHTML = '🎤';
+            voiceBtn.className = 'btn btn-secondary';
+            voiceBtn.title = 'Busca por voz';
+            voiceBtn.style.marginLeft = '0.5rem';
+            
+            voiceBtn.addEventListener('click', startVoiceRecognition);
+            document.querySelector('.search-form > div:last-child').appendChild(voiceBtn);
+        }
+
+        function startVoiceRecognition() {
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                showToast('Fale a placa do veículo...', 'info');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                const cleanTranscript = transcript.replace(/\s+/g, '').toUpperCase();
+                placaInput.value = cleanTranscript;
+                
+                const inputEvent = new Event('input');
+                placaInput.dispatchEvent(inputEvent);
+                
+                showToast(`Placa reconhecida: ${cleanTranscript}`, 'success');
+            };
+
+            recognition.onerror = (event) => {
+                showToast('Erro no reconhecimento de voz', 'error');
+            };
+
+            recognition.start();
+        }
+
+        // ========================================
+        // ===== PRINT FUNCTIONALITY ============
+        // ========================================
+        
+        function printResults() {
+            const printWindow = window.open('', '_blank');
+            const resultData = {
+                placa: document.getElementById('placaResult').textContent,
+                modelo: document.getElementById('modeloResult').textContent,
+                cor: document.getElementById('corResult').textContent,
+                ano: document.getElementById('anoResult').textContent,
+                nome: document.getElementById('nomeResult').textContent
+            };
+            
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Relatório de Consulta - ${resultData.placa}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .header { text-align: center; margin-bottom: 30px; }
+                            .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                            .label { font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>🛡️ Sentinela IA</h1>
+                            <h2>Relatório de Consulta de Placa</h2>
+                            <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="label">Placa:</span>
+                            <span>${resultData.placa}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Modelo:</span>
+                            <span>${resultData.modelo}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Cor:</span>
+                            <span>${resultData.cor}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Ano:</span>
+                            <span>${resultData.ano}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Proprietário:</span>
+                            <span>${resultData.nome}</span>
+                        </div>
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Add print button to results section
+        if (resultsSection) {
+            const printBtn = document.createElement('button');
+            printBtn.className = 'btn btn-secondary';
+            printBtn.innerHTML = '🖨️ Imprimir';
+            printBtn.onclick = printResults;
+            document.querySelector('.results-header').appendChild(printBtn);
+        }
+
+        // ========================================
+        // ===== FINAL SETUP ====================
+        // ========================================
+        
+        // Set focus to search input on page load
+        window.addEventListener('load', () => {
+            placaInput.focus();
+        });
+
+        // Show tips on first visit
+        if (!localStorage.getItem('hasVisited')) {
+            setTimeout(() => {
+                showToast('💡 Dica: Use Ctrl+K para focar na busca rapidamente!', 'info');
+                localStorage.setItem('hasVisited', 'true');
+            }, 2000);
+        }
+    </script>
 </body>
 </html>

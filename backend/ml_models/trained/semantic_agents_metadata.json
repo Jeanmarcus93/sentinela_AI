@@ -1,0 +1,80 @@
+{
+  "accuracy": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "roc_auc": 1.0,
+  "total_samples": 5000,
+  "test_samples": 1000,
+  "train_samples": 4000,
+  "suspeito_samples": 3324,
+  "sem_alteracao_samples": 1676,
+  "training_time_seconds": 0.982649564743042,
+  "cv_f1_mean": 1.0,
+  "cv_f1_std": 0.0,
+  "confusion_matrix": [
+    [
+      335,
+      0
+    ],
+    [
+      0,
+      665
+    ]
+  ],
+  "per_class": {
+    "SEM_ALTERACAO": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 335
+    },
+    "SUSPEITO": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 665
+    }
+  },
+  "training_timestamp": 1757809784.7602286,
+  "training_date": "2025-09-13 21:29:44",
+  "model_version": "2.0_agents_binary_fixed",
+  "semantic_classes": [
+    "SUSPEITO",
+    "SEM_ALTERACAO"
+  ],
+  "ml_config": {
+    "spacy_model": "pt_core_news_sm",
+    "sentence_transformer": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "test_size": 0.2,
+    "cv_folds": 5,
+    "random_state": 42,
+    "min_samples_per_class": 10
+  },
+  "training_config": {
+    "enable_agent_specialization": true,
+    "use_binary_classification": true,
+    "enable_ensemble_methods": true,
+    "use_confidence_calibration": true,
+    "enable_active_learning": false,
+    "suspicion_threshold": 0.5,
+    "confidence_threshold": 0.7,
+    "min_suspicion_indicators": 2,
+    "suspicion_weights": {
+      "palavras_suspeitas": 0.3,
+      "padroes_cobertura": 0.25,
+      "contexto_criminal": 0.2,
+      "inconsistencias": 0.15,
+      "indicadores_gerais": 0.1
+    }
+  },
+  "model_files": {
+    "classifier": "C:\\Users\\jeanm\\Documents\\PYTHON\\Sentinela_IA\\backend\\ml_models\\trained\\semantic_agents_clf.joblib",
+    "labels": "C:\\Users\\jeanm\\Documents\\PYTHON\\Sentinela_IA\\backend\\ml_models\\trained\\semantic_agents_labels.joblib",
+    "metadata": "C:\\Users\\jeanm\\Documents\\PYTHON\\Sentinela_IA\\backend\\ml_models\\trained\\semantic_agents_metadata.json"
+  },
+  "notes": {
+    "version": "Versão corrigida - funciona sem classificacao_manual",
+    "future_features": "Sistema de feedback será implementado posteriormente"
+  }
+}
