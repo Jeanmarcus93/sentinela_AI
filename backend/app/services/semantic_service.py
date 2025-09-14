@@ -351,17 +351,20 @@ def contextual_analysis(text: str, contexts: SemanticContext) -> Tuple[str, int,
 
 def extract_keywords(text: str, topk: int = 15) -> List[Tuple[str, float]]:
     """Extração de palavras-chave com YAKE"""
-    if not text:
+    if not text or len(text.strip()) < 20: # Adicione essa validação
         return []
     
     try:
         kw = load_yake()
+        if kw is None:
+            return []
+            
         keywords = kw.extract_keywords(text)
         return keywords[:topk]
     except Exception as e:
         print(f"Erro na extração de keywords: {e}")
         return []
-
+    
 def embed(texts: List[str]) -> np.ndarray:
     """Gera embeddings para lista de textos"""
     if not texts:
