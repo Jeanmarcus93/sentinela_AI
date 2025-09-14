@@ -1,75 +1,12 @@
-#!/usr/bin/env python3
-"""
-Sistema de Análise de Placas v2.0 - Integração com Sistema de Agentes
-"""
+import sys
 
 from app import create_app
 from config.settings import criar_tabelas
-import asyncio
-import sys
+
+# Importe o novo blueprint de feedback
+from app.routes.analise_routes import feedback_bp
 
 app = create_app()
-
-# Função de migração (mantida do app.py original)
-def migrar_apreensoes_para_tabela_normalizada():
-    """
-    Migra dados da coluna JSON 'apreensoes' para a nova tabela normalizada 'apreensoes'.
-    """
-    print("Iniciando migração de apreensões para tabela normalizada...")
-    try:
-        from app.models.database import get_db_connection
-        import json
-        
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                # Verifica se a migração já foi executada
-                cur.execute("SELECT COUNT(*) FROM apreensoes;")
-                if cur.fetchone()[0] > 0:
-                    print("A tabela 'apreensoes' já contém dados. A migração não será executada novamente.")
-                    return
-
-                # Busca todas as ocorrências que possuem dados de apreensões
-                cur.execute("SELECT id, apreensoes FROM ocorrencias WHERE apreensoes IS NOT NULL AND apreensoes::text != '[]';")
-                ocorrencias = cur.fetchall()
-
-                if not ocorrencias:
-                    print("Nenhum dado de apreensão para migrar.")
-                    return
-
-                print(f"Encontrados {len(ocorrencias)} ocorrências com dados de apreensões para migrar.")
-                
-                for occ_id, apreensoes_data in ocorrencias:
-                    apreensoes_list = []
-                    if isinstance(apreensoes_data, str):
-                        try:
-                            apreensoes_list = json.loads(apreensoes_data)
-                        except json.JSONDecodeError:
-                            print(f"AVISO: Não foi possível decodificar o JSON para a ocorrência ID {occ_id}.")
-                            continue
-                    elif isinstance(apreensoes_data, list):
-                        apreensoes_list = apreensoes_data
-
-                    for item in apreensoes_list:
-                        tipo = item.get('tipo')
-                        if tipo == 'Armas':
-                            tipo = 'Arma'
-                        
-                        quantidade = item.get('quantidade')
-                        unidade = item.get('unidade')
-                        
-                        if not all([tipo, quantidade, unidade]):
-                            print(f"AVISO: Item de apreensão incompleto para ocorrência ID {occ_id}.")
-                            continue
-                        
-                        cur.execute(
-                            "INSERT INTO apreensoes (ocorrencia_id, tipo, quantidade, unidade) VALUES (%s, %s, %s, %s)",
-                            (occ_id, tipo, quantidade, unidade)
-                        )
-                conn.commit()
-                print("Migração de apreensões concluída com sucesso.")
-
-    except Exception as e:
-        print(f"Erro durante a migração de apreensões: {e}")
 
 def inicializar_sistema_agentes():
     """
@@ -135,8 +72,10 @@ if __name__ == '__main__':
         criar_tabelas()
         print("✅ Tabelas verificadas/criadas com sucesso!")
         
-        # 2. Migrar apreensões (mantendo funcionalidade original)  
-        # migrar_apreensoes_para_tabela_normalizada()
+        app = create_app()
+
+        # Registre o novo blueprint
+        app.register_blueprint(feedback_bp)
         
         # 3. Inicializar sistema de agentes (nova funcionalidade)
         sistema_agentes_ok = inicializar_sistema_agentes()

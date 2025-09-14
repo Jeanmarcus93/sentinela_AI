@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# backend/ml_models/training/train_semantic_agents.py
-"""
-Sistema de Treinamento Semântico com Agentes Especializados
-Nova modalidade com arquitetura de agentes e implementação inteligente
-Classificação Binária: SUSPEITO vs SEM_ALTERACAO
-VERSÃO CORRIGIDA - Funciona sem classificacao_manual
-"""
-
 import os
 import sys
 import json
@@ -36,6 +27,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 from collections import Counter
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 # Imports de NLP
 import spacy
@@ -659,8 +651,6 @@ class AgentSemanticTrainer:
         y_pred_proba = model.predict_proba(X_test)[:, 1]
         
         # Métricas básicas
-        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-        
         metrics = {
             'accuracy': accuracy_score(y_test, y_pred),
             'precision': precision_score(y_test, y_pred, zero_division=0),

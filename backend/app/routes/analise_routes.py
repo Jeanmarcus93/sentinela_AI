@@ -1,5 +1,6 @@
-# analise.py
 import re
+import os
+import csv
 import json
 import pandas as pd
 from sqlalchemy import text
@@ -10,6 +11,9 @@ from app.services.placa_service import analisar_placa_json
 from app.models.database import get_engine, get_db_connection
 from app.services.semantic_service import analyze_text
 from app.models.database import get_db_connection
+
+# Cria um Blueprint para as rotas de feedback
+feedback_bp = Blueprint('feedback', __name__)
 
 # Cria um Blueprint para as rotas de análise
 analise_bp = Blueprint('analise_bp', __name__)
@@ -257,3 +261,36 @@ def api_analise_placa(placa):
     except Exception as e:
         print(f"ERRO em api_analise_placa: {e}")
         return jsonify({"error": "Ocorreu um erro interno ao analisar a placa."}), 500
+    
+@feedback_bp.route('/feedback', methods=['POST'])
+def add_feedback():
+    data = request.get_json()
+    if not data or 'text' not in data or 'prediction' not in data or 'is_correct' not in data:
+        return jsonify({"error": "Dados de feedback inválidos"}), 400
+
+    feedback_entry = {
+        "text": data["text"],
+        "prediction": data["prediction"],
+        "is_correct": data["is_correct"]
+    }
+
+    # Define o caminho do arquivo de feedback
+    feedback_file = os.path.join('data', 'feedback.csv')
+
+    # Cria o diretório e o arquivo se não existirem
+    os.makedirs(os.path.dirname(feedback_file), exist_ok=True)
+    file_exists = os.path.isfile(feedback_file)
+
+    try:
+        with open(feedback_file, 'a', newline='', encoding='utf-8') as csvfile:
+            fieldnames = ['text', 'prediction', 'is_correct']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(feedback_entry)
+
+        return jsonify({"message": "Feedback recebido com sucesso!"}), 201
+    except Exception as e:
+        return jsonify({"error": f"Erro ao salvar feedback: {e}"}), 500

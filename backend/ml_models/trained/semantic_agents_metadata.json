@@ -9,7 +9,7 @@
   "train_samples": 4000,
   "suspeito_samples": 3324,
   "sem_alteracao_samples": 1676,
-  "training_time_seconds": 0.982649564743042,
+  "training_time_seconds": 0.9905059337615967,
   "cv_f1_mean": 1.0,
   "cv_f1_std": 0.0,
   "confusion_matrix": [
@@ -36,8 +36,8 @@
       "support": 665
     }
   },
-  "training_timestamp": 1757809784.7602286,
-  "training_date": "2025-09-13 21:29:44",
+  "training_timestamp": 1757819245.1529362,
+  "training_date": "2025-09-14 00:07:25",
   "model_version": "2.0_agents_binary_fixed",
   "semantic_classes": [
     "SUSPEITO",
