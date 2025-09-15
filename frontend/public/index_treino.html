@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ Sentinela IA - Banco de Treino</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Layout Principal */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            backdrop-filter: blur(20px);
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.12);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1.5rem 2rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 0 0 20px 20px;
+            margin: 0 1rem 2rem 1rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(29, 78, 216, 0.1);
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: center;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu li {
+            margin: 0;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 1.2rem 2rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+            border-radius: 0 12px 12px 0;
+            margin: 0.2rem 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-menu a:hover {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #1d4ed8;
+            border-left-color: #1d4ed8;
+            transform: translateX(4px);
+        }
+
+        .sidebar-menu a.active {
+            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+            color: white;
+            border-left-color: #1e40af;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+        }
+
+        .sidebar-menu .icon {
+            margin-right: 0.8rem;
+            font-size: 1.1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 300px;
+            padding: 2rem;
+            background: transparent;
+        }
+
+        .content-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .content-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-subtitle {
+            font-size: 1.1rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        /* Search Section */
+        .search-section {
+            text-align: center;
+        }
+
+        .search-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .placa-input {
+            width: 100%;
+            padding: 1.2rem 1.5rem;
+            font-size: 1.2rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .placa-input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            background: #f1f5f9;
+            color: #1d4ed8;
+        }
+
+        .validation-message {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .validation-message.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .validation-message.success {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #1d4ed8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Results */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .vehicle-info {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .vehicle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .vehicle-placa {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            text-shadow: 0 2px 4px rgba(29, 78, 216, 0.1);
+        }
+
+        .vehicle-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .dashboard-card h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border-radius: 8px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .content-title {
+                font-size: 2rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Error States */
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #bbf7d0;
+            margin: 1rem 0;
+            text-align: center;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">🛡️ Sentinela IA</div>
+                <div class="sidebar-subtitle">Banco de Treino - Dados Normalizados</div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#consulta" class="nav-link active" data-section="consulta">
+                    <span class="icon">🔍</span>Consulta de Placas
+                </a></li>
+                <li><a href="#dashboard" class="nav-link" data-section="dashboard">
+                    <span class="icon">📊</span>Dashboard
+                </a></li>
+                <li><a href="#analytics" class="nav-link" data-section="analytics">
+                    <span class="icon">📈</span>Análises
+                </a></li>
+                <li><a href="#export" class="nav-link" data-section="export">
+                    <span class="icon">📤</span>Exportar Dados
+                </a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Content Header -->
+            <div class="content-header">
+                <h1 class="content-title" id="content-title">🔍 Consulta de Placas</h1>
+                <p class="content-subtitle" id="content-subtitle">Consulte dados normalizados do banco de treino</p>
+            </div>
+
+            <!-- Consulta Section -->
+            <div id="consulta-section" class="section">
+                <!-- Search Section -->
+                <div class="card search-section">
+                    <form class="search-form" id="searchForm">
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                class="placa-input" 
+                                id="placaInput" 
+                                placeholder="ABC1234 ou ABC1D23"
+                                maxlength="8"
+                                autocomplete="off"
+                            >
+                            <button type="button" class="clear-btn" id="clearBtn" style="display: none;">×</button>
+                        </div>
+                        <div class="validation-message" id="validationMessage"></div>
+                        
+                        <div class="button-group">
+                            <button type="submit" class="btn btn-primary" id="searchBtn">
+                                <span class="search-icon">🔍</span>
+                                Consultar Placa
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="searchVehiclesBtn">
+                                <span class="search-icon">🚗</span>
+                                Buscar Veículos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Loading -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Consultando dados...</p>
+                </div>
+
+                <!-- Results -->
+                <div class="results-section" id="resultsSection">
+                    <!-- Vehicle Info will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="section" style="display: none;">
+                <div class="card">
+                    <h2>📊 Dashboard - Estatísticas Gerais</h2>
+                    <div class="dashboard-grid" id="dashboardGrid">
+                        <div class="dashboard-card">
+                            <h3>🚗 Total de Veículos</h3>
+                            <div class="stat-value" id="totalVehicles">-</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>📋 Total de Passagens</h3>
+                            <div class="stat-value" id="totalPassages">-</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>📈 Média por Veículo</h3>
+                            <div class="stat-value" id="avgPassages">-</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>🏆 Máximo de Passagens</h3>
+                            <div class="stat-value" id="maxPassages">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>🏆 Top Veículos com Mais Passagens</h2>
+                    <div id="topVehiclesList">
+                        <!-- Top vehicles will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analytics-section" class="section" style="display: none;">
+                <div class="card">
+                    <h2>📈 Análises Detalhadas</h2>
+                    <p>Análises avançadas dos dados do banco de treino</p>
+                    <div id="analyticsContent">
+                        <!-- Analytics content will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div id="export-section" class="section" style="display: none;">
+                <div class="card">
+                    <h2>📤 Exportar Dados</h2>
+                    <p>Exporte dados do banco de treino em formato CSV</p>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="exportVehicles()">
+                            <span class="icon">🚗</span>
+                            Exportar Veículos
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportPassages()">
+                            <span class="icon">📋</span>
+                            Exportar Passagens
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentSection = 'consulta';
+        let currentVehicleData = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            loadDashboard();
+        });
+
+        function initializeApp() {
+            console.log('🛡️ Sentinela IA - Banco de Treino iniciado');
+            
+            // Setup navigation
+            setupNavigation();
+            
+            // Setup form validation
+            setupFormValidation();
+        }
+
+        function setupEventListeners() {
+            // Search form
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+            
+            // Clear button
+            document.getElementById('clearBtn').addEventListener('click', clearInput);
+            
+            // Input events
+            document.getElementById('placaInput').addEventListener('input', handleInputChange);
+            
+            // Search vehicles button
+            document.getElementById('searchVehiclesBtn').addEventListener('click', showVehicleSearch);
+        }
+
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                });
+            });
+        }
+
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(`${section}-section`).style.display = 'block';
+            
+            // Add active class to selected nav link
+            document.querySelector(`[data-section="${section}"]`).classList.add('active');
+            
+            // Update content header
+            updateContentHeader(section);
+            
+            currentSection = section;
+            
+            // Load section-specific data
+            if (section === 'dashboard') {
+                loadDashboard();
+            } else if (section === 'analytics') {
+                loadAnalytics();
+            }
+        }
+
+        function updateContentHeader(section) {
+            const titleElement = document.getElementById('content-title');
+            const subtitleElement = document.getElementById('content-subtitle');
+            
+            const headers = {
+                'consulta': {
+                    title: '🔍 Consulta de Placas',
+                    subtitle: 'Consulte dados normalizados do banco de treino'
+                },
+                'dashboard': {
+                    title: '📊 Dashboard',
+                    subtitle: 'Estatísticas gerais do banco de treino'
+                },
+                'analytics': {
+                    title: '📈 Análises',
+                    subtitle: 'Análises avançadas dos dados'
+                },
+                'export': {
+                    title: '📤 Exportar Dados',
+                    subtitle: 'Exporte dados em formato CSV'
+                }
+            };
+            
+            const header = headers[section];
+            titleElement.textContent = header.title;
+            subtitleElement.textContent = header.subtitle;
+        }
+
+        function setupFormValidation() {
+            const placaInput = document.getElementById('placaInput');
+            const validationMessage = document.getElementById('validationMessage');
+            
+            placaInput.addEventListener('blur', function() {
+                validatePlaca(this.value);
+            });
+        }
+
+        function validatePlaca(placa) {
+            const validationMessage = document.getElementById('validationMessage');
+            
+            if (!placa) {
+                hideValidationMessage();
+                return false;
+            }
+            
+            // Brazilian license plate validation
+            const placaRegex = /^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
+            
+            if (!placaRegex.test(placa)) {
+                showValidationMessage('Formato inválido. Use ABC1234 ou ABC1D23', 'error');
+                return false;
+            }
+            
+            hideValidationMessage();
+            return true;
+        }
+
+        function showValidationMessage(message, type) {
+            const validationMessage = document.getElementById('validationMessage');
+            validationMessage.textContent = message;
+            validationMessage.className = `validation-message ${type}`;
+            validationMessage.style.display = 'block';
+        }
+
+        function hideValidationMessage() {
+            const validationMessage = document.getElementById('validationMessage');
+            validationMessage.style.display = 'none';
+        }
+
+        function handleInputChange() {
+            const input = document.getElementById('placaInput');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            // Show/hide clear button
+            clearBtn.style.display = input.value ? 'block' : 'none';
+            
+            // Auto-format input
+            input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function clearInput() {
+            const input = document.getElementById('placaInput');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            input.value = '';
+            clearBtn.style.display = 'none';
+            hideValidationMessage();
+            input.focus();
+        }
+
+        async function handleSearch(e) {
+            e.preventDefault();
+            
+            const placa = document.getElementById('placaInput').value.trim();
+            
+            if (!validatePlaca(placa)) {
+                return;
+            }
+            
+            await searchVehicle(placa);
+        }
+
+        async function searchVehicle(placa) {
+            const loading = document.getElementById('loading');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            try {
+                showLoading();
+                
+                const response = await fetch(`/api/treino/consulta_placa/${encodeURIComponent(placa)}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('Placa não encontrada no banco de treino');
+                    } else {
+                        throw new Error('Erro ao consultar placa');
+                    }
+                }
+                
+                const data = await response.json();
+                currentVehicleData = data;
+                
+                displayVehicleResults(data);
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('resultsSection').classList.remove('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function displayVehicleResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            const html = `
+                <div class="vehicle-info">
+                    <div class="vehicle-header">
+                        <div class="vehicle-placa">${data.veiculo.placa}</div>
+                        <div class="vehicle-details">
+                            <div><strong>Marca/Modelo:</strong> ${data.veiculo.marca_modelo || 'N/A'}</div>
+                            <div><strong>Tipo:</strong> ${data.veiculo.tipo || 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="vehicle-stats">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.resumo.total_passagens}</div>
+                            <div class="stat-label">Total de Passagens</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.resumo.cidades_visitadas}</div>
+                            <div class="stat-label">Cidades Visitadas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.resumo.ufs_visitadas}</div>
+                            <div class="stat-label">UFs Visitadas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${data.resumo.rodovias_utilizadas}</div>
+                            <div class="stat-label">Rodovias Utilizadas</div>
+                        </div>
+                    </div>
+                    
+                    <div class="vehicle-timeline">
+                        <div><strong>Primeira Passagem:</strong> ${formatDate(data.resumo.primeira_passagem)}</div>
+                        <div><strong>Última Passagem:</strong> ${formatDate(data.resumo.ultima_passagem)}</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>📋 Passagens Recentes (${data.passagens.length})</h3>
+                    <div class="passages-list">
+                        ${data.passagens.slice(0, 10).map(passagem => `
+                            <div class="passage-item">
+                                <div class="passage-date">${formatDate(passagem.dataHoraUTC)}</div>
+                                <div class="passage-location">${passagem.cidade || 'N/A'} - ${passagem.uf || 'N/A'}</div>
+                                <div class="passage-road">${passagem.codigoRodovia || 'N/A'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            resultsSection.innerHTML = html;
+            resultsSection.classList.add('show');
+        }
+
+        function showError(message) {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = `
+                <div class="error-message">
+                    ❌ ${message}
+                </div>
+            `;
+            resultsSection.classList.add('show');
+        }
+
+        function showSuccess(message) {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = `
+                <div class="success-message">
+                    ✅ ${message}
+                </div>
+            `;
+            resultsSection.classList.add('show');
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('pt-BR');
+        }
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/treino/dashboard');
+                const data = await response.json();
+                
+                // Update statistics
+                document.getElementById('totalVehicles').textContent = data.estatisticas_gerais.total_veiculos.toLocaleString();
+                document.getElementById('totalPassages').textContent = data.estatisticas_gerais.total_passagens.toLocaleString();
+                document.getElementById('avgPassages').textContent = data.estatisticas_gerais.media_passagens_por_veiculo.toFixed(1);
+                document.getElementById('maxPassages').textContent = data.estatisticas_gerais.max_passagens.toLocaleString();
+                
+                // Update top vehicles
+                const topVehiclesList = document.getElementById('topVehiclesList');
+                topVehiclesList.innerHTML = data.top_veiculos.slice(0, 10).map(vehicle => `
+                    <div class="vehicle-item">
+                        <div class="vehicle-placa">${vehicle.placa}</div>
+                        <div class="vehicle-stats">
+                            <span>${vehicle.total_passagens} passagens</span>
+                            <span>${vehicle.total_cidades} cidades</span>
+                            <span>${vehicle.total_ufs} UFs</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/treino/analytics');
+                const data = await response.json();
+                
+                const analyticsContent = document.getElementById('analyticsContent');
+                analyticsContent.innerHTML = `
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <h4>📊 Estatísticas Gerais</h4>
+                            <p>Total de veículos: ${data.estatisticas_gerais.total_veiculos.toLocaleString()}</p>
+                            <p>Total de passagens: ${data.estatisticas_gerais.total_passagens.toLocaleString()}</p>
+                            <p>Média por veículo: ${data.estatisticas_gerais.media_passagens_por_veiculo.toFixed(1)}</p>
+                        </div>
+                        <div class="analytics-card">
+                            <h4>🏆 Top Veículos</h4>
+                            ${data.top_veiculos.slice(0, 5).map(vehicle => `
+                                <p>${vehicle.placa}: ${vehicle.total_passagens} passagens</p>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Erro ao carregar análises:', error);
+            }
+        }
+
+        function showVehicleSearch() {
+            const placa = prompt('Digite o termo de busca para veículos:');
+            if (placa) {
+                searchVehicles(placa);
+            }
+        }
+
+        async function searchVehicles(searchTerm) {
+            try {
+                showLoading();
+                
+                const response = await fetch(`/api/treino/vehicles/search?q=${encodeURIComponent(searchTerm)}&limit=20`);
+                const data = await response.json();
+                
+                if (data.veiculos.length === 0) {
+                    showError('Nenhum veículo encontrado');
+                    return;
+                }
+                
+                const resultsSection = document.getElementById('resultsSection');
+                resultsSection.innerHTML = `
+                    <div class="card">
+                        <h3>🚗 Veículos Encontrados (${data.veiculos.length})</h3>
+                        <div class="vehicles-list">
+                            ${data.veiculos.map(vehicle => `
+                                <div class="vehicle-item" onclick="searchVehicle('${vehicle.placa}')">
+                                    <div class="vehicle-placa">${vehicle.placa}</div>
+                                    <div class="vehicle-info">
+                                        <div>${vehicle.marca_modelo || 'N/A'}</div>
+                                        <div>${vehicle.total_passagens} passagens</div>
+                                        <div>${vehicle.total_cidades} cidades</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                resultsSection.classList.add('show');
+                
+            } catch (error) {
+                showError('Erro ao buscar veículos');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function exportVehicles() {
+            window.open('/api/treino/export/vehicles?limit=1000', '_blank');
+        }
+
+        function exportPassages() {
+            if (currentVehicleData && currentVehicleData.veiculo) {
+                window.open(`/api/treino/export/passages/${currentVehicleData.veiculo.id}`, '_blank');
+            } else {
+                alert('Selecione um veículo primeiro para exportar suas passagens');
+            }
+        }
+    </script>
+</body>
+</html>
+

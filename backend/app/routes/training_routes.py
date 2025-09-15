@@ -24,19 +24,19 @@ training_bp = Blueprint('training', __name__, url_prefix='/api/training')
 # Configurações de treinamento
 TRAINING_CONFIGS = {
     'semantic': {
-        'script': 'train_semantic.py',
+        'script': 'ml_models/training/train_semantic.py',
         'description': 'Modelo de Análise Semântica',
         'min_samples': 50,
         'output_dir': 'ml_models/trained'
     },
     'routes': {
-        'script': 'train_route_analysis.py', 
+        'script': 'scripts/train_route_analysis.py', 
         'description': 'Modelo de Análise de Rotas',
         'min_samples': 100,
         'output_dir': 'ml_models/trained'
     },
     'hybrid': {
-        'script': 'train_hybrid_model.py',
+        'script': 'scripts/train_hybrid_model.py',
         'description': 'Modelo Híbrido',
         'min_samples': 75,
         'output_dir': 'ml_models/trained'

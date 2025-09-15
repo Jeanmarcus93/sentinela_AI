@@ -1,0 +1,7 @@
+dataHoraUTC,placa,pontoCaptura,cidade,uf,codigoEquipamento,codigoRodovia,km,faixa,sentido,velocidade,latitude,longitude,refImagem1,refImagem2,sistemaOrigem,ehEquipamentoMovel,ehLeituraHumana,tipoInferidoIA,marcaModeloInferidoIA
+2024-01-15 10:30:00,ABC1234,Posto 001,São Paulo,SP,EQ001,BR-116,150.5,1,Norte,85.5,-23.5505,-46.6333,IMG001.jpg,IMG002.jpg,Sistema A,false,false,Automóvel,Toyota Corolla
+2024-01-15 11:15:00,DEF5678,Posto 002,Rio de Janeiro,RJ,EQ002,BR-101,200.3,2,Sul,92.0,-22.9068,-43.1729,IMG003.jpg,IMG004.jpg,Sistema B,true,true,Caminhão,Volvo FH
+2024-01-15 12:00:00,GHI9012,Posto 003,Belo Horizonte,MG,EQ003,BR-040,75.8,1,Norte,78.2,-19.9167,-43.9345,IMG005.jpg,IMG006.jpg,Sistema A,false,false,Motocicleta,Honda CB 600
+2024-01-15 13:45:00,JKL3456,Posto 004,Curitiba,PR,EQ004,BR-277,120.7,2,Sul,88.9,-25.4244,-49.2654,IMG007.jpg,IMG008.jpg,Sistema C,true,false,Automóvel,Ford Focus
+2024-01-15 14:30:00,MNO7890,Posto 005,Porto Alegre,RS,EQ005,BR-290,95.2,1,Norte,82.1,-30.0346,-51.2177,IMG009.jpg,IMG010.jpg,Sistema B,false,true,Caminhão,Mercedes-Benz Actros
+

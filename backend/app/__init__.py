@@ -148,6 +148,18 @@ def create_app(config_name=None):
         app.logger.warning(f"Sistema de treinamento não pôde ser carregado: {e}")
         app.config['TRAINING_AVAILABLE'] = False
     
+    # Blueprint SENTINELA TREINO (banco de dados de treino normalizado)
+    try:
+        from app.routes.sentinela_treino_routes import sentinela_treino_bp
+        app.register_blueprint(sentinela_treino_bp)
+        print("✅ Sistema Sentinela Treino (sentinela_treino_bp) registrado em /api/treino/")
+        app.config['SENTINELA_TREINO_AVAILABLE'] = True
+    except ImportError as e:
+        print(f"⚠️ Sistema Sentinela Treino não disponível: {e}")
+        print("   As rotas /api/treino/ não estarão disponíveis")
+        app.logger.warning(f"Sistema sentinela treino não pôde ser carregado: {e}")
+        app.config['SENTINELA_TREINO_AVAILABLE'] = False
+    
     # ==========================================
     # ERROR HANDLERS
     # ==========================================
@@ -215,7 +227,8 @@ def create_app(config_name=None):
             "environment": app.config['ENV'],
             "services": {
                 "database": db_status,
-                "agents_system": "available" if app.config.get('AGENTS_AVAILABLE') else "unavailable"
+                "agents_system": "available" if app.config.get('AGENTS_AVAILABLE') else "unavailable",
+                "sentinela_treino": "available" if app.config.get('SENTINELA_TREINO_AVAILABLE') else "unavailable"
             }
         }), 200 if db_status == "healthy" else 503
     
@@ -279,7 +292,20 @@ def create_app(config_name=None):
                     "prepare_data": "/api/training/feedback/prepare",
                     "validate_data": "/api/training/feedback/validate",
                     "history": "/api/training/history"
-                } if app.config.get('TRAINING_AVAILABLE') else "not_available"
+                } if app.config.get('TRAINING_AVAILABLE') else "not_available",
+                "sentinela_treino": {
+                    "health": "/api/treino/health",
+                    "info": "/api/treino/info",
+                    "search_vehicles": "/api/treino/vehicles/search",
+                    "vehicle_details": "/api/treino/vehicles/<id>",
+                    "vehicle_passages": "/api/treino/vehicles/<id>/passages",
+                    "analytics": "/api/treino/analytics",
+                    "dashboard": "/api/treino/dashboard",
+                    "consulta_placa": "/api/treino/consulta_placa/<placa>",
+                    "municipios": "/api/treino/municipios",
+                    "export_vehicles": "/api/treino/export/vehicles",
+                    "export_passages": "/api/treino/export/passages/<id>"
+                } if app.config.get('SENTINELA_TREINO_AVAILABLE') else "not_available"
             },
             "agents_system": agents_info,
             "frontend_urls": allowed_origins if app.debug else ["configured_in_production"]
@@ -347,6 +373,8 @@ def create_app(config_name=None):
     print("   - Legacy: /api/consulta_placa/, /api/analise, etc.")
     if app.config.get('AGENTS_AVAILABLE'):
         print("   - Agentes v2: /api/v2/")
+    if app.config.get('SENTINELA_TREINO_AVAILABLE'):
+        print("   - Sentinela Treino: /api/treino/")
     print("   - Sistema: /api/info, /api/health")
     print("   - CORS habilitado para:", allowed_origins[:2], "...")
     

@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional
 # Banco principal (sistema)
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
-DB_NAME = os.getenv("DB_NAME", "sentinela_teste")
+DB_NAME = os.getenv("DB_NAME", "sentinela_treino")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "Jmkjmk.00")
 
@@ -218,16 +218,19 @@ def criar_tabelas():
     engine = get_engine()
     
     with engine.connect() as conn:
-        # Tabela de veículos
+        # Tabela de veículos (estrutura do sentinela_treino)
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS veiculos (
             id SERIAL PRIMARY KEY,
             placa VARCHAR(10) UNIQUE NOT NULL,
             marca_modelo VARCHAR(200),
-            cor VARCHAR(50),
             tipo VARCHAR(100),
-            ano_modelo INTEGER,
-            local_emplacamento VARCHAR(100),
+            total_passagens INTEGER DEFAULT 0,
+            primeira_passagem TIMESTAMP,
+            ultima_passagem TIMESTAMP,
+            cidades_visitadas TEXT[],
+            ufs_visitadas TEXT[],
+            sistemas_origem TEXT[],
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -235,6 +238,7 @@ def criar_tabelas():
         
         # Índices para veículos
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_veiculos_placa ON veiculos(placa)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_veiculos_total_passagens ON veiculos(total_passagens)"))
         
         # Tabela de pessoas
         conn.execute(text("""
@@ -254,27 +258,40 @@ def criar_tabelas():
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pessoas_cpf_cnpj ON pessoas(cpf_cnpj)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_pessoas_veiculo ON pessoas(veiculo_id)"))
         
-        # Tabela de passagens
+        # Tabela de passagens (estrutura do sentinela_treino)
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS passagens (
             id SERIAL PRIMARY KEY,
             veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE CASCADE,
-            datahora TIMESTAMP NOT NULL,
-            municipio VARCHAR(200),
-            estado VARCHAR(5),
-            rodovia VARCHAR(100),
-            ilicito_ida BOOLEAN DEFAULT FALSE,
-            ilicito_volta BOOLEAN DEFAULT FALSE,
+            dataHoraUTC TIMESTAMP NOT NULL,
+            pontoCaptura VARCHAR(200),
+            cidade VARCHAR(200),
+            uf VARCHAR(5),
+            codigoEquipamento VARCHAR(100),
+            codigoRodovia VARCHAR(50),
+            km NUMERIC(10,3),
+            faixa INTEGER,
+            sentido VARCHAR(50),
+            velocidade NUMERIC(5,2),
+            latitude NUMERIC(15,12),
+            longitude NUMERIC(15,12),
+            refImagem1 VARCHAR(500),
+            refImagem2 VARCHAR(500),
+            sistemaOrigem VARCHAR(100),
+            ehEquipamentoMovel BOOLEAN DEFAULT FALSE,
+            ehLeituraHumana BOOLEAN DEFAULT FALSE,
+            tipoInferidoIA VARCHAR(100),
+            marcaModeloInferidoIA VARCHAR(200),
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """))
         
-        # Índices para passagens
+        # Índices para passagens (usando colunas corretas)
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_veiculo ON passagens(veiculo_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_datahora ON passagens(datahora)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_municipio ON passagens(municipio)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_ilicito_ida ON passagens(ilicito_ida) WHERE ilicito_ida = TRUE"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_ilicito_volta ON passagens(ilicito_volta) WHERE ilicito_volta = TRUE"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_datahora ON passagens(dataHoraUTC)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_cidade ON passagens(cidade)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_uf ON passagens(uf)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_passagens_rodovia ON passagens(codigoRodovia)"))
         
         # Enum para tipos de apreensão
         conn.execute(text("""

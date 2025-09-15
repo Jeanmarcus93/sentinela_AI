@@ -965,6 +965,159 @@
             color: #6b7280;
         }
         
+        /* Estilos para Seção de Feedbacks */
+        .feedback-section {
+            margin-top: 20px;
+        }
+        
+        .feedback-header {
+            margin-bottom: 20px;
+        }
+        
+        .feedback-header p {
+            color: #64748b;
+            margin-bottom: 15px;
+        }
+        
+        .feedback-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .feedback-list {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 200px;
+        }
+        
+        .feedback-placeholder {
+            text-align: center;
+            color: #94a3b8;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+        
+        .feedback-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .feedback-item:hover {
+            border-left-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feedback-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .feedback-text {
+            color: #475569;
+            font-size: 14px;
+            margin-bottom: 8px;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .feedback-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .feedback-classification {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .feedback-classification.suspeito {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .feedback-classification.normal {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .feedback-classification.duvidoso {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .training-controls {
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .control-section h4 {
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: #475569;
+            cursor: pointer;
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #3b82f6;
+        }
+        
+        .training-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .training-options label {
+            display: block;
+            color: #475569;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .training-options input,
+        .training-options select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .training-options input:focus,
+        .training-options select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
         /* Validação de Dados */
         .validation-section {
             padding: 20px;
@@ -1664,6 +1817,63 @@
                 </div>
             </div>
 
+            <!-- Seção de Feedbacks -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3>💬 Feedbacks para Treinamento</h3>
+                <div class="feedback-section">
+                    <div class="feedback-header">
+                        <p>Visualize e gerencie os feedbacks coletados para treinamento do modelo:</p>
+                        <div class="feedback-actions">
+                            <button class="btn btn-secondary" onclick="loadFeedbackList()" id="load-feedback-btn">
+                                <span class="icon">🔄</span>
+                                Carregar Feedbacks
+                            </button>
+                            <button class="btn btn-primary" onclick="startManualTraining()" id="manual-train-btn">
+                                <span class="icon">🎯</span>
+                                Treinar com Feedbacks
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="feedback-list" id="feedback-list-training">
+                        <div class="feedback-placeholder">
+                            <p>Clique em "Carregar Feedbacks" para visualizar os dados disponíveis</p>
+                        </div>
+                    </div>
+                    
+                    <div class="training-controls" id="training-controls" style="display: none;">
+                        <div class="control-section">
+                            <h4>🎛️ Controles de Treinamento</h4>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="use-all-feedbacks" checked>
+                                    Usar todos os feedbacks disponíveis
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="validate-before-train" checked>
+                                    Validar dados antes do treinamento
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="backup-model" checked>
+                                    Fazer backup do modelo atual
+                                </label>
+                            </div>
+                            <div class="training-options">
+                                <label for="training-epochs">Épocas de treinamento:</label>
+                                <input type="number" id="training-epochs" value="10" min="1" max="100">
+                                
+                                <label for="learning-rate">Taxa de aprendizado:</label>
+                                <select id="learning-rate">
+                                    <option value="0.001">0.001 (Padrão)</option>
+                                    <option value="0.01">0.01 (Rápido)</option>
+                                    <option value="0.0001">0.0001 (Conservador)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Validação de Dados -->
             <div class="card" style="margin-bottom: 2rem;">
                 <h3>🔍 Validação de Dados</h3>
@@ -1976,7 +2186,7 @@
                 addToRecentSearches(placa);
                 
                 // Real API call
-                const response = await fetch(`/api/consulta_placa/${encodeURIComponent(placa)}`);
+                const response = await fetch(`/api/treino/consulta_placa/${encodeURIComponent(placa)}`);
                 
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -2005,15 +2215,18 @@
         }
 
         function processApiResponse(apiData, placa) {
-            // Nova estrutura da API: { veiculo, pessoas, passagens, ocorrencias, resumo }
-            const { veiculo = {}, pessoas = [], passagens = [], ocorrencias = [], resumo = {} } = apiData;
+            // Estrutura da API do banco normalizado: { veiculo, passagens, estatisticas, top_cidades, resumo }
+            const { veiculo = {}, passagens = [], estatisticas = {}, top_cidades = [], resumo = {} } = apiData;
             
+            // Adaptar para estrutura esperada pelo frontend
             return {
                 veiculo: veiculo,
-                pessoas: pessoas,
+                pessoas: [], // Não temos pessoas no banco normalizado
                 passagens: passagens,
-                ocorrencias: ocorrencias,
-                resumo: resumo
+                ocorrencias: [], // Não temos ocorrências no banco normalizado
+                resumo: resumo,
+                estatisticas: estatisticas,
+                top_cidades: top_cidades
             };
         }
 
@@ -2022,6 +2235,7 @@
             const veiculo = data.veiculo || {};
             const pessoas = data.pessoas || [];
             const resumo = data.resumo || {};
+            const estatisticas = data.estatisticas || {};
             
             // Atualizar campos do veículo
             document.getElementById('placaResult').textContent = veiculo.placa || '-';
@@ -2036,12 +2250,12 @@
             document.getElementById('crimePrfResult').textContent = veiculo.crime_prf ? 'Sim' : 'Não';
             document.getElementById('abordagemPrfResult').textContent = veiculo.abordagem_prf ? 'Sim' : 'Não';
             
-            // Dados das pessoas relacionadas
-            document.getElementById('totalPessoasResult').textContent = resumo.total_pessoas || 0;
-            document.getElementById('totalProprietariosResult').textContent = resumo.total_proprietarios || 0;
-            document.getElementById('totalCondutoresResult').textContent = resumo.total_condutores || 0;
-            document.getElementById('totalPassageirosResult').textContent = resumo.total_passageiros || 0;
-            document.getElementById('totalRelevantesResult').textContent = resumo.total_relevantes || 0;
+            // Dados das pessoas relacionadas - adaptação para banco normalizado
+            document.getElementById('totalPessoasResult').textContent = pessoas.length || 0;
+            document.getElementById('totalProprietariosResult').textContent = 0; // Não temos no banco normalizado
+            document.getElementById('totalCondutoresResult').textContent = 0; // Não temos no banco normalizado
+            document.getElementById('totalPassageirosResult').textContent = 0; // Não temos no banco normalizado
+            document.getElementById('totalRelevantesResult').textContent = estatisticas.total_passagens || 0;
             
             // Exibir lista de pessoas
             displayPessoasList(pessoas);
@@ -2151,11 +2365,22 @@
             passagens.forEach((passagem, index) => {
                 console.log('Processing passagem:', passagem);
                 
-                const datahora = formatDateTime(passagem.datahora);
-                const municipio = passagem.municipio || 'Não informado';
-                const rodovia = passagem.rodovia || 'Não informado';
-                const ilicitoIda = passagem.ilicito_ida ? 'Sim' : 'Não';
-                const ilicitoVolta = passagem.ilicito_volta ? 'Sim' : 'Não';
+                // Adaptação para nova estrutura do banco normalizado
+                // Os campos da API estão em minúsculas
+                const datahora = formatDateTime(passagem.datahorautc);
+                const municipio = passagem.cidade || 'Não informado';
+                const rodovia = passagem.codigorodovia || 'Não informado';
+                
+                // Debug: log dos dados processados
+                console.log('Passagem processada:', {
+                    datahora: datahora,
+                    municipio: municipio,
+                    rodovia: rodovia,
+                    original: passagem
+                });
+                // Para o banco normalizado, vamos usar campos diferentes ou padrões
+                const ilicitoIda = 'Não'; // Campo não existe no novo banco
+                const ilicitoVolta = 'Não'; // Campo não existe no novo banco
                 
                 // Determinar cor baseada no status ilícito
                 let statusClass = 'status-normal';
@@ -2241,12 +2466,12 @@
             // Total de passagens
             document.getElementById('total-passagens').textContent = passagens.length;
             
-            // Locais únicos
-            const municipiosUnicos = new Set(passagens.map(p => p.municipio).filter(m => m));
+            // Locais únicos - adaptação para novo banco
+            const municipiosUnicos = new Set(passagens.map(p => p.cidade).filter(m => m));
             document.getElementById('locais-unicos').textContent = municipiosUnicos.size;
             
-            // Período ativo (primeira e última passagem)
-            const datas = passagens.map(p => new Date(p.datahora)).filter(d => !isNaN(d));
+            // Período ativo (primeira e última passagem) - adaptação para novo banco
+            const datas = passagens.map(p => new Date(p.datahorautc)).filter(d => !isNaN(d));
             if (datas.length > 0) {
                 const primeiraData = new Date(Math.min(...datas));
                 const ultimaData = new Date(Math.max(...datas));
@@ -3724,6 +3949,11 @@
         
         async function loadTrainingData() {
             try {
+                console.log('🔄 Iniciando carregamento de dados de treinamento...');
+                
+                // Testar conectividade primeiro
+                await testTrainingConnectivity();
+                
                 // Carregar status dos modelos
                 await loadModelsStatus();
                 
@@ -3733,36 +3963,75 @@
                 // Carregar histórico de treinamentos
                 await loadTrainingHistory();
                 
+                console.log('✅ Dados de treinamento carregados com sucesso');
+                
             } catch (error) {
-                console.error('Erro ao carregar dados de treinamento:', error);
+                console.error('❌ Erro ao carregar dados de treinamento:', error);
                 showToast('Erro ao carregar dados de treinamento', 'error');
+            }
+        }
+        
+        async function testTrainingConnectivity() {
+            try {
+                console.log('🔍 Testando conectividade com backend...');
+                const response = await fetch('/api/health');
+                
+                if (!response.ok) {
+                    throw new Error(`Backend não está respondendo: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Backend conectado:', data);
+                
+            } catch (error) {
+                console.error('❌ Erro de conectividade:', error);
+                throw new Error(`Falha na conectividade: ${error.message}`);
             }
         }
         
         async function loadModelsStatus() {
             try {
+                console.log('Carregando status dos modelos...');
                 const response = await fetch('/api/training/status');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Dados recebidos:', data);
                 
                 if (data.models) {
                     updateModelStatus('semantic', data.models.semantic);
                     updateModelStatus('routes', data.models.routes);
                     updateModelStatus('hybrid', data.models.hybrid);
+                } else {
+                    console.warn('Nenhum modelo encontrado nos dados:', data);
                 }
                 
             } catch (error) {
                 console.error('Erro ao carregar status dos modelos:', error);
+                showToast(`Erro ao carregar status dos modelos: ${error.message}`, 'error');
             }
         }
         
         function updateModelStatus(modelType, status) {
+            console.log(`Atualizando status do modelo ${modelType}:`, status);
+            
             const statusElement = document.getElementById(`${modelType}-status`);
             const lastTrainedElement = document.getElementById(`${modelType}-last-trained`);
             const accuracyElement = document.getElementById(`${modelType}-accuracy`);
             const trainBtn = document.getElementById(`train-${modelType}-btn`);
             
+            console.log(`Elementos encontrados para ${modelType}:`, {
+                statusElement: !!statusElement,
+                lastTrainedElement: !!lastTrainedElement,
+                accuracyElement: !!accuracyElement,
+                trainBtn: !!trainBtn
+            });
+            
             if (statusElement) {
-                if (status.exists) {
+                if (status && status.exists) {
                     statusElement.textContent = 'Pronto';
                     statusElement.className = 'status-badge status-ready';
                 } else {
@@ -3771,11 +4040,11 @@
                 }
             }
             
-            if (lastTrainedElement && status.metadata) {
+            if (lastTrainedElement && status && status.metadata) {
                 lastTrainedElement.textContent = status.metadata.trained_at || 'Nunca';
             }
             
-            if (accuracyElement && status.metadata) {
+            if (accuracyElement && status && status.metadata) {
                 accuracyElement.textContent = status.metadata.accuracy || 'N/A';
             }
             
@@ -3796,6 +4065,143 @@
                 
             } catch (error) {
                 console.error('Erro ao carregar estatísticas de feedback:', error);
+            }
+        }
+        
+        async function loadFeedbackList() {
+            const loadBtn = document.getElementById('load-feedback-btn');
+            const originalText = loadBtn.innerHTML;
+            const feedbackList = document.getElementById('feedback-list-training');
+            
+            try {
+                // Mostrar loading
+                loadBtn.disabled = true;
+                loadBtn.innerHTML = '<span class="loading-spinner"></span> Carregando...';
+                
+                console.log('🔄 Carregando lista de feedbacks...');
+                
+                const response = await fetch('/api/feedback/listar?per_page=20');
+                const data = await response.json();
+                
+                if (data.feedbacks && data.feedbacks.length > 0) {
+                    feedbackList.innerHTML = data.feedbacks.map(feedback => `
+                        <div class="feedback-item">
+                            <div class="feedback-item-header">
+                                <span class="feedback-classification ${feedback.classificacao_usuario?.toLowerCase() || 'normal'}">
+                                    ${feedback.classificacao_usuario || 'Normal'}
+                                </span>
+                                <span class="feedback-date">${new Date(feedback.criado_em).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div class="feedback-text">
+                                ${feedback.texto_relato || 'Sem texto disponível'}
+                            </div>
+                            <div class="feedback-meta">
+                                <span>Feedback: ${feedback.feedback_usuario || 'N/A'}</span>
+                                <span>Confiança: ${feedback.confianca_modelo ? (feedback.confianca_modelo * 100).toFixed(1) + '%' : 'N/A'}</span>
+                                <span>Modelo: ${feedback.classificacao_modelo || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    // Mostrar controles de treinamento
+                    document.getElementById('training-controls').style.display = 'block';
+                    
+                    console.log(`✅ ${data.feedbacks.length} feedbacks carregados`);
+                    showToast(`${data.feedbacks.length} feedbacks carregados com sucesso!`, 'success');
+                    
+                } else {
+                    feedbackList.innerHTML = `
+                        <div class="feedback-placeholder">
+                            <p>Nenhum feedback encontrado. Adicione alguns feedbacks primeiro.</p>
+                        </div>
+                    `;
+                    console.log('⚠️ Nenhum feedback encontrado');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar feedbacks:', error);
+                feedbackList.innerHTML = `
+                    <div class="feedback-placeholder">
+                        <p>Erro ao carregar feedbacks: ${error.message}</p>
+                    </div>
+                `;
+                showToast('Erro ao carregar feedbacks', 'error');
+                
+            } finally {
+                // Restaurar botão
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = originalText;
+            }
+        }
+        
+        async function startManualTraining() {
+            const trainBtn = document.getElementById('manual-train-btn');
+            const originalText = trainBtn.innerHTML;
+            
+            try {
+                // Mostrar loading
+                trainBtn.disabled = true;
+                trainBtn.innerHTML = '<span class="loading-spinner"></span> Treinando...';
+                
+                console.log('🎯 Iniciando treinamento manual...');
+                
+                // Obter configurações dos controles
+                const useAllFeedbacks = document.getElementById('use-all-feedbacks').checked;
+                const validateBeforeTrain = document.getElementById('validate-before-train').checked;
+                const backupModel = document.getElementById('backup-model').checked;
+                const epochs = document.getElementById('training-epochs').value;
+                const learningRate = document.getElementById('learning-rate').value;
+                
+                console.log('Configurações:', {
+                    useAllFeedbacks,
+                    validateBeforeTrain,
+                    backupModel,
+                    epochs,
+                    learningRate
+                });
+                
+                // Preparar dados de treinamento se necessário
+                if (validateBeforeTrain) {
+                    console.log('🔍 Validando dados antes do treinamento...');
+                    await validateTrainingData();
+                }
+                
+                // Executar treinamento do modelo semântico (principal)
+                console.log('🚀 Executando treinamento do modelo semântico...');
+                const response = await fetch('/api/training/train/semantic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        use_all_feedbacks: useAllFeedbacks,
+                        epochs: parseInt(epochs),
+                        learning_rate: parseFloat(learningRate),
+                        backup_model: backupModel
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('✅ Treinamento concluído com sucesso!');
+                    showToast('Treinamento concluído com sucesso!', 'success');
+                    
+                    // Recarregar dados
+                    await loadTrainingData();
+                    
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido no treinamento');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro no treinamento manual:', error);
+                showToast(`Erro no treinamento: ${error.message}`, 'error');
+                
+            } finally {
+                // Restaurar botão
+                trainBtn.disabled = false;
+                trainBtn.innerHTML = originalText;
             }
         }
         
