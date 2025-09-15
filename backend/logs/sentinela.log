@@ -91,3 +91,38 @@
 2025-09-15 00:50:28,418 - sentinela - INFO - __init__ - initialize_system - Debug: True
 2025-09-15 00:50:28,418 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
 2025-09-15 00:50:28,419 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:07:48,008 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:07:48,009 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:07:48,010 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:07:48,011 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:07:48,012 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:09:35,270 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:09:35,270 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:09:35,270 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:09:35,271 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:09:35,271 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:16:34,923 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:16:34,924 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:16:34,924 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:16:34,924 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:16:34,925 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:21:20,345 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:21:20,346 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:21:20,346 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:21:20,347 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:21:20,347 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:21:50,647 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:21:50,648 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:21:50,648 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:21:50,648 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:21:50,649 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:22:30,686 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:22:30,687 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:22:30,688 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:22:30,689 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:22:30,693 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 01:23:42,264 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 01:23:42,265 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 01:23:42,265 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 01:23:42,265 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 01:23:42,266 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost

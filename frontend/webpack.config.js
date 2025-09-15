@@ -16,23 +16,14 @@ module.exports = {
     open: true,
     historyApiFallback: true,
     hot: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/health': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/info': {
+    proxy: [
+      {
+        context: ['/api', '/health', '/info'],
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       }
-    },
+    ],
   },
   mode: 'development',
 };

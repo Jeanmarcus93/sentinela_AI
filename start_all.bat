@@ -1,16 +1,16 @@
 @echo off
-echo 🚀 Iniciando Sentinela IA - Desenvolvimento
-echo ==========================================
+echo 🚀 Iniciando Sentinela IA - Backend e Frontend
+echo ==============================================
 echo.
 
 echo 📡 Iniciando Backend (Flask)...
 start "Sentinela Backend" cmd /k "cd backend && python run.py"
 
-echo ⏳ Aguardando 3 segundos...
-timeout /t 3 /nobreak > nul
+echo ⏳ Aguardando 5 segundos para o backend inicializar...
+timeout /t 5 /nobreak > nul
 
 echo 🎨 Iniciando Frontend (Webpack)...
-start "Sentinela Frontend" cmd /k "cd frontend && npm start"
+start "Sentinela Frontend" cmd /k ".\start_frontend.bat"
 
 echo.
 echo ✅ Ambos os serviços foram iniciados!
