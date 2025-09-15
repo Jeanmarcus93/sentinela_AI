@@ -1,3 +1,93 @@
 2025-09-13 23:01:44,828 INFO: Sistema Sentinela IA iniciado [in C:\Users\jeanm\Documents\PYTHON\Sentinela_IA\backend\wsgi.py:69]
 2025-09-13 23:01:45,544 INFO: Tabelas do banco verificadas/criadas com sucesso [in C:\Users\jeanm\Documents\PYTHON\Sentinela_IA\backend\wsgi.py:74]
 2025-09-13 23:01:45,545 INFO: Sistema de agentes especializados inicializado [in C:\Users\jeanm\Documents\PYTHON\Sentinela_IA\backend\wsgi.py:83]
+2025-09-14 00:41:28,432 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 00:41:28,433 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 00:41:28,436 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 00:41:28,437 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 00:41:28,437 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 14:42:47,700 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 14:42:47,703 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 14:42:47,703 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 14:42:47,704 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 14:42:47,704 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 15:01:46,708 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 15:01:46,709 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 15:01:46,709 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 15:01:46,709 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 15:01:46,709 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 15:16:33,234 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 15:16:33,236 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 15:16:33,237 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 15:16:33,237 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 15:16:33,237 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 15:18:05,868 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 15:18:05,868 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 15:18:05,869 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 15:18:05,869 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 15:18:05,870 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 17:41:07,055 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 17:41:07,055 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 17:41:07,055 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 17:41:07,056 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 17:41:07,056 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 18:14:02,955 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 18:14:02,955 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 18:14:02,957 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 18:14:02,957 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 18:14:02,957 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 18:37:17,464 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 18:37:17,465 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 18:37:17,466 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 18:37:17,466 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 18:37:17,466 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 20:34:02,672 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 20:34:02,673 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 20:34:02,673 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 20:34:02,673 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 20:34:02,673 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 20:38:24,418 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 20:38:24,419 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 20:38:24,419 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 20:38:24,419 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 20:38:24,419 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 20:38:40,781 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 20:38:40,781 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 20:38:40,782 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 20:38:40,782 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 20:38:40,783 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 21:08:26,371 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 21:08:26,372 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 21:08:26,373 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 21:08:26,373 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 21:08:26,374 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 22:35:39,113 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 22:35:39,113 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 22:35:39,113 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 22:35:39,114 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 22:35:39,114 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 22:44:53,367 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 22:44:53,368 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 22:44:53,368 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 22:44:53,368 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 22:44:53,369 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-14 22:48:56,701 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-14 22:48:56,702 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-14 22:48:56,702 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-14 22:48:56,702 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-14 22:48:56,702 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 00:29:00,799 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 00:29:00,800 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 00:29:00,800 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 00:29:00,801 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 00:29:00,801 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 00:30:31,261 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 00:30:31,261 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 00:30:31,261 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 00:30:31,262 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 00:30:31,262 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost
+2025-09-15 00:50:28,417 - sentinela - INFO - __init__ - initialize_system - Iniciando Sistema de Análise de Placas
+2025-09-15 00:50:28,417 - sentinela - INFO - __init__ - initialize_system - Ambiente: development
+2025-09-15 00:50:28,418 - sentinela - INFO - __init__ - initialize_system - Debug: True
+2025-09-15 00:50:28,418 - sentinela - INFO - __init__ - initialize_system - Banco principal: sentinela_teste@localhost
+2025-09-15 00:50:28,419 - sentinela - INFO - __init__ - initialize_system - Banco veículos: veiculos_db@localhost

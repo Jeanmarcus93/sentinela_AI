@@ -85,7 +85,7 @@ class AgentTrainingConfig:
     enable_active_learning: bool = False
     
     # Thresholds para classificação binária
-    suspicion_threshold: float = 0.5
+    suspicion_threshold: float = 0.3
     confidence_threshold: float = 0.7
     min_suspicion_indicators: int = 2
     
@@ -95,12 +95,12 @@ class AgentTrainingConfig:
     def __post_init__(self):
         if self.suspicion_weights is None:
             self.suspicion_weights = {
-                'palavras_suspeitas': 0.3,
-                'padroes_cobertura': 0.25,
-                'contexto_criminal': 0.2,
-                'inconsistencias': 0.15,
-                'indicadores_gerais': 0.1
-            }
+            'palavras_suspeitas': 0.5,        # Aumentar para 50%
+            'padroes_cobertura': 0.2,
+            'contexto_criminal': 0.15,
+            'inconsistencias': 0.1,
+            'indicadores_gerais': 0.05
+        }
 
 # =============================================================================
 # SISTEMA DE CLASSIFICAÇÃO BINÁRIA INTELIGENTE

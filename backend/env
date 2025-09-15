@@ -9,7 +9,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=sentinela_teste
 DB_USER=postgres
-DB_PASSWORD=sua_senha_aqui
+DB_PASSWORD=Jmkjmk.00
 
 # ----------------------------------------------
 # BANCO DE DADOS DE VEÍCULOS (OPCIONAL)
@@ -18,7 +18,7 @@ VEICULOS_DB_HOST=localhost
 VEICULOS_DB_PORT=5432
 VEICULOS_DB_NAME=veiculos_db
 VEICULOS_DB_USER=postgres
-VEICULOS_DB_PASSWORD=sua_senha_aqui
+VEICULOS_DB_PASSWORD=Jmkjmk.00
 
 # ----------------------------------------------
 # CONFIGURAÇÕES DO FLASK
