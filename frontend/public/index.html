@@ -1,0 +1,3553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ Sentinela IA - Sistema Inteligente</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Layout Principal */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            backdrop-filter: blur(20px);
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.12);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1.5rem 2rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 0 0 20px 20px;
+            margin: 0 1rem 2rem 1rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(29, 78, 216, 0.1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: center;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu li {
+            margin: 0;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 1.2rem 2rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+            border-radius: 0 12px 12px 0;
+            margin: 0.2rem 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-menu a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(29, 78, 216, 0.05) 100%);
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+
+        .sidebar-menu a:hover::before {
+            width: 100%;
+        }
+
+        .sidebar-menu a:hover {
+            color: #1d4ed8;
+            border-left-color: #3b82f6;
+            transform: translateX(4px);
+        }
+
+        .sidebar-menu a.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+            color: #1d4ed8;
+            border-left-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .sidebar-menu .icon {
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 300px;
+            padding: 2rem;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        /* Header do conteúdo principal */
+        .content-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .content-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+
+        .content-title {
+            font-size: 2.2rem;
+            color: #1d4ed8;
+            margin-bottom: 0.8rem;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(29, 78, 216, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .content-subtitle {
+            color: #475569;
+            font-size: 1.1rem;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        /* Estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-card h4 {
+            color: #1d4ed8;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        /* Análise Container */
+        .analysis-container {
+            padding: 1rem 0;
+        }
+
+        .analysis-charts {
+            margin-top: 2rem;
+        }
+
+        .chart-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+        }
+
+        .chart-container {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .locations-list {
+            margin-top: 1rem;
+        }
+
+        /* Histórico Container */
+        .historico-container {
+            padding: 1rem 0;
+        }
+
+        .historico-filters {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .filter-group select {
+            padding: 0.8rem;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            background: white;
+            font-size: 0.9rem;
+        }
+
+        .passagens-list {
+            min-height: 300px;
+        }
+
+        .loading-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .loading-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .historico-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+        }
+
+        .page-info {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Title Section */
+        .page-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-title p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(20px);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.3) 0%, rgba(29, 78, 216, 0.3) 100%);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Search Section */
+        .search-section {
+            text-align: center;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .input-group {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto 1rem auto;
+        }
+
+        .placa-input {
+            width: 100%;
+            padding: 1.2rem 3rem 1.2rem 1.2rem;
+            font-size: 1.3rem;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-align: center;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .placa-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 8px 25px rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .placa-input.valid {
+            border-color: #48bb78;
+        }
+
+        .placa-input.invalid {
+            border-color: #f56565;
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #a0aec0;
+            transition: color 0.3s;
+        }
+
+        .clear-btn:hover {
+            color: #3b82f6;
+        }
+
+        .validation-message {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .validation-message.valid {
+            color: #48bb78;
+        }
+
+        .validation-message.invalid {
+            color: #f56565;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7rem;
+            justify-content: center;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.3px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            color: #475569;
+            border: 2px solid #e2e8f0;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(29, 78, 216, 0.05) 100%);
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+
+        /* Recent Searches */
+        .recent-searches {
+            margin-top: 2rem;
+        }
+
+        .recent-searches h3 {
+            margin-bottom: 1rem;
+            color: #4a5568;
+        }
+
+        .recent-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            background: #f7fafc;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .recent-placa {
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .recent-time {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .results-header h2 {
+            color: #2d3748;
+        }
+
+        .export-btn {
+            background: #48bb78;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background: #38a169;
+        }
+
+        .result-tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-card {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .info-card h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-card p {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-regular {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-alert {
+            background: #fed7cc;
+            color: #c53030;
+        }
+        
+        /* Estilos para classificações de pessoas */
+        .classificacao-proprietario {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+        }
+        
+        .classificacao-condutor {
+            background: #fef3c7 !important;
+            color: #d97706 !important;
+        }
+        
+        .classificacao-passageiro {
+            background: #f3e8ff !important;
+            color: #7c3aed !important;
+        }
+        
+        .classificacao-relevante {
+            background: #f0fdf4 !important;
+            color: #16a34a !important;
+        }
+        
+        .classificacao-normal {
+            background: #f3f4f6 !important;
+            color: #6b7280 !important;
+        }
+        
+        /* Estilos para Treinamento */
+        .training-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .training-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .training-header h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .training-header p {
+            color: #718096;
+            font-size: 16px;
+        }
+        
+        .training-form {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .form-section h4 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .form-group input[readonly] {
+            background-color: #f7fafc;
+            color: #718096;
+        }
+        
+        .model-result {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .result-item .label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .result-item .value {
+            color: #2d3748;
+            font-weight: 500;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .radio-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .radio-label:hover {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+        
+        .radio-label input[type="radio"] {
+            margin-right: 8px;
+            width: auto;
+        }
+        
+        .radio-label input[type="radio"]:checked + .radio-text {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .radio-label:has(input[type="radio"]:checked) {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+        
+        .training-stats {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .training-stats h4 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Grid de Modelos */
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .model-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .model-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .model-header h4 {
+            color: #1e293b;
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .model-info {
+            margin-bottom: 20px;
+        }
+        
+        .model-info p {
+            margin: 8px 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .model-info strong {
+            color: #475569;
+        }
+        
+        .model-actions {
+            text-align: center;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-badge.status-ready {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-badge.status-training {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-badge.status-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-badge.status-missing {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        /* Validação de Dados */
+        .validation-section {
+            padding: 20px;
+        }
+        
+        .validation-actions {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .validation-results {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .validation-results h4 {
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+        
+        .validation-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .validation-item .icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .validation-item.valid .icon {
+            color: #10b981;
+        }
+        
+        .validation-item.invalid .icon {
+            color: #ef4444;
+        }
+        
+        .validation-item.warning .icon {
+            color: #f59e0b;
+        }
+        
+        /* Histórico de Treinamentos */
+        .training-history {
+            padding: 20px;
+        }
+        
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .history-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .history-model {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .history-date {
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .history-details {
+            color: #475569;
+            font-size: 14px;
+        }
+        
+        .history-status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .history-status.success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .history-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .history-status.running {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        /* Loading States */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .btn.loading .icon {
+            animation: spin 1s linear infinite;
+        }
+        
+        .stat-card {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .justification-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 8px;
+            min-height: 80px;
+        }
+        
+        .justification-box p {
+            margin: 0;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+        
+        .justification-box.loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+        }
+        
+        .justification-box.loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: #48bb78;
+        }
+
+        .toast.error {
+            background: #f56565;
+        }
+
+        .toast.info {
+            background: #3b82f6;
+        }
+
+        /* Loading Animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .main-container {
+                padding: 1rem;
+            }
+
+            .page-title h1 {
+                font-size: 2rem;
+            }
+
+
+            .results-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+        }
+
+        /* ========================================
+           ANÁLISE IA STYLES
+        ========================================= */
+        
+        .ia-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .risk-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+        
+        .risk-badge.alto-risco {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .risk-badge.médio-risco {
+            background-color: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fed7aa;
+        }
+        
+        .risk-badge.baixo-risco {
+            background-color: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+        }
+        
+        .summary-item .label {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .summary-item .value {
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .patterns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .pattern-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .pattern-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+        
+        .pattern-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .pattern-label {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+        
+        .pattern-count {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .occurrences-list {
+            margin-top: 1rem;
+        }
+        
+        .occurrence-item {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #e5e7eb;
+        }
+        
+        .occurrence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .occurrence-date {
+            font-weight: 500;
+            color: #6b7280;
+        }
+        
+        .occurrence-type {
+            background: #f3f4f6;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        
+        .risk-score {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        
+        .risk-score.high-risk {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .risk-score.medium-risk {
+            background: #fffbeb;
+            color: #d97706;
+        }
+        
+        .risk-score.low-risk {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+        
+        .occurrence-text {
+            color: #374151;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            max-height: 4.8rem; /* ~3 linhas */
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .occurrence-text.expanded {
+            max-height: none;
+        }
+        
+        .relato-container {
+            position: relative;
+        }
+        
+        .expand-relato-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+        
+        .expand-relato-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+        }
+        
+        .occurrence-analysis {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .analysis-class {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .analysis-confidence {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .occurrence-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .keyword {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+        }
+        
+        .no-occurrences {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">🛡️ Sentinela IA</div>
+                <div class="sidebar-subtitle">Sistema Inteligente de Análise de Veículos</div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="#consulta" class="nav-link active" data-section="consulta">
+                    <span class="icon">🔍</span>Consulta de Placas
+                </a></li>
+                <li><a href="#nova-ocorrencia" class="nav-link" data-section="nova-ocorrencia">
+                    <span class="icon">📝</span>Inserir Ocorrência
+                </a></li>
+                <li><a href="#treinamento" class="nav-link" data-section="treinamento">
+                    <span class="icon">🎓</span>Treinamento IA
+                </a></li>
+                <li><a href="#estatisticas" class="nav-link" data-section="estatisticas">
+                    <span class="icon">📊</span>Estatísticas
+                </a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Content Header -->
+            <div class="content-header">
+                <h1 class="content-title" id="content-title">🔍 Consulta de Placas</h1>
+                <p class="content-subtitle" id="content-subtitle">Consulte informações detalhadas sobre veículos e pessoas relacionadas</p>
+            </div>
+
+        <!-- Search Section -->
+        <div class="card search-section">
+            <form class="search-form" id="searchForm">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="placa-input" 
+                        id="placaInput" 
+                        placeholder="ABC1234 ou ABC1D23"
+                        maxlength="8"
+                        autocomplete="off"
+                    >
+                    <button type="button" class="clear-btn" id="clearBtn" style="display: none;">×</button>
+                </div>
+                <div class="validation-message" id="validationMessage"></div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" id="searchBtn">
+                        <span class="search-icon">🔍</span>
+                        Consultar Placa
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="advancedBtn">
+                        ⚙️ Busca Avançada
+                    </button>
+                </div>
+            </form>
+
+
+            <!-- Recent Searches -->
+            <div class="recent-searches" id="recentSearches" style="display: none;">
+                <h3>Consultas Recentes</h3>
+                <div id="recentList">
+                    <div class="recent-item">
+                        <span class="recent-placa">ABC1234</span>
+                        <span class="recent-time">Há 5 minutos</span>
+                    </div>
+                    <div class="recent-item">
+                        <span class="recent-placa">XYZ5678</span>
+                        <span class="recent-time">Há 2 horas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Section -->
+        <div class="card training-section" id="trainingSection" style="display: none;">
+            <div class="training-header">
+                <h2>🎓 Sistema de Treinamento de Modelos IA</h2>
+                <p>Gerencie e treine os modelos de IA com base nos feedbacks coletados</p>
+            </div>
+
+            <!-- Status dos Modelos -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3>📊 Status dos Modelos</h3>
+                <div id="models-status" class="models-grid">
+                    <div class="model-card">
+                        <div class="model-header">
+                            <h4>🧠 Modelo Semântico</h4>
+                            <span class="status-badge" id="semantic-status">Verificando...</span>
+                        </div>
+                        <div class="model-info">
+                            <p><strong>Descrição:</strong> Análise semântica de relatos</p>
+                            <p><strong>Amostras mínimas:</strong> 50</p>
+                            <p><strong>Último treinamento:</strong> <span id="semantic-last-trained">-</span></p>
+                            <p><strong>Acurácia:</strong> <span id="semantic-accuracy">-</span></p>
+                        </div>
+                        <div class="model-actions">
+                            <button class="btn btn-primary" onclick="trainModel('semantic')" id="train-semantic-btn">
+                                <span class="icon">🚀</span>
+                                Treinar Modelo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="model-card">
+                        <div class="model-header">
+                            <h4>🛣️ Modelo de Rotas</h4>
+                            <span class="status-badge" id="routes-status">Verificando...</span>
+                        </div>
+                        <div class="model-info">
+                            <p><strong>Descrição:</strong> Análise de padrões de rotas</p>
+                            <p><strong>Amostras mínimas:</strong> 100</p>
+                            <p><strong>Último treinamento:</strong> <span id="routes-last-trained">-</span></p>
+                            <p><strong>Acurácia:</strong> <span id="routes-accuracy">-</span></p>
+                        </div>
+                        <div class="model-actions">
+                            <button class="btn btn-primary" onclick="trainModel('routes')" id="train-routes-btn">
+                                <span class="icon">🚀</span>
+                                Treinar Modelo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="model-card">
+                        <div class="model-header">
+                            <h4>🔀 Modelo Híbrido</h4>
+                            <span class="status-badge" id="hybrid-status">Verificando...</span>
+                        </div>
+                        <div class="model-info">
+                            <p><strong>Descrição:</strong> Combinação de múltiplos modelos</p>
+                            <p><strong>Amostras mínimas:</strong> 75</p>
+                            <p><strong>Último treinamento:</strong> <span id="hybrid-last-trained">-</span></p>
+                            <p><strong>Acurácia:</strong> <span id="hybrid-accuracy">-</span></p>
+                        </div>
+                        <div class="model-actions">
+                            <button class="btn btn-primary" onclick="trainModel('hybrid')" id="train-hybrid-btn">
+                                <span class="icon">🚀</span>
+                                Treinar Modelo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas de Feedback -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3>📈 Estatísticas de Feedback</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Total de Feedbacks</span>
+                            <span class="stat-value" id="total-feedbacks-training">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Feedbacks Corretos</span>
+                            <span class="stat-value" id="feedbacks-corretos-training">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Feedbacks Incorretos</span>
+                            <span class="stat-value" id="feedbacks-incorretos-training">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❓</div>
+                        <div class="stat-info">
+                            <span class="stat-label">Feedbacks Duvidosos</span>
+                            <span class="stat-value" id="feedbacks-duvidosos-training">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validação de Dados -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <h3>🔍 Validação de Dados</h3>
+                <div class="validation-section">
+                    <p>Verifique a qualidade dos dados antes do treinamento:</p>
+                    <div class="validation-actions">
+                        <button class="btn btn-secondary" onclick="validateTrainingData()" id="validate-data-btn">
+                            <span class="icon">🔍</span>
+                            Validar Dados
+                        </button>
+                        <button class="btn btn-secondary" onclick="prepareTrainingData()" id="prepare-data-btn">
+                            <span class="icon">📊</span>
+                            Preparar Dados
+                        </button>
+                    </div>
+                    <div id="validation-results" class="validation-results" style="display: none;">
+                        <!-- Resultados da validação serão inseridos aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Histórico de Treinamentos -->
+            <div class="card">
+                <h3>📚 Histórico de Treinamentos</h3>
+                <div id="training-history" class="training-history">
+                    <p>Carregando histórico...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card results-section" id="resultsSection">
+            <div class="results-header">
+                <h2>Resultados da Consulta</h2>
+                <button class="btn export-btn" onclick="exportResults()">📤 Exportar</button>
+            </div>
+
+            <!-- Result Tabs -->
+            <div class="result-tabs">
+                <button class="tab active" onclick="showTab('info')">📋 Informações</button>
+                <button class="tab" onclick="showTab('analise')">📊 Análise</button>
+                <button class="tab" onclick="showTab('historico')">📚 Histórico</button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="tab-content active" id="info-tab">
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h4>🚗 Dados do Veículo</h4>
+                        <p><strong>Placa:</strong> <span id="placaResult">-</span></p>
+                        <p><strong>Marca/Modelo:</strong> <span id="marcaModeloResult">-</span></p>
+                        <p><strong>Cor:</strong> <span id="corResult">-</span></p>
+                        <p><strong>Tipo:</strong> <span id="tipoResult">-</span></p>
+                        <p><strong>Ano/Modelo:</strong> <span id="anoModeloResult">-</span></p>
+                        <p><strong>Local Emplacamento:</strong> <span id="localEmplacamentoResult">-</span></p>
+                        <p><strong>ID:</strong> <span id="veiculoIdResult">-</span></p>
+                        <p><strong>Transferência Recente:</strong> <span id="transferenciaRecenteResult">-</span></p>
+                        <p><strong>Comunicação Venda:</strong> <span id="comunicacaoVendaResult">-</span></p>
+                        <p><strong>Crime PRF:</strong> <span id="crimePrfResult">-</span></p>
+                        <p><strong>Abordagem PRF:</strong> <span id="abordagemPrfResult">-</span></p>
+                        <p><strong>Status:</strong> <span class="status-badge status-regular" id="statusResult">Regular</span></p>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>👤 Pessoas Relacionadas</h4>
+                        <div id="pessoasContainer">
+                            <p><strong>Total:</strong> <span id="totalPessoasResult">0</span></p>
+                            <p><strong>Proprietários:</strong> <span id="totalProprietariosResult">0</span></p>
+                            <p><strong>Condutores:</strong> <span id="totalCondutoresResult">0</span></p>
+                            <p><strong>Passageiros:</strong> <span id="totalPassageirosResult">0</span></p>
+                            <p><strong>Relevantes:</strong> <span id="totalRelevantesResult">0</span></p>
+                        </div>
+                        <div id="pessoasList" style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
+                            <!-- Lista de pessoas será inserida aqui -->
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+            <div class="tab-content" id="historico-tab">
+                <div class="historico-container">
+                    <h3>📚 Histórico de Passagens</h3>
+                    
+                    <div class="historico-filters">
+                        <div class="filter-group">
+                            <label>Período:</label>
+                            <select id="periodo-filter">
+                                <option value="todos">Todos</option>
+                                <option value="7d">Últimos 7 dias</option>
+                                <option value="30d">Últimos 30 dias</option>
+                                <option value="90d">Últimos 90 dias</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Local:</label>
+                            <select id="local-filter">
+                                <option value="todos">Todos os locais</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="passagens-list" id="passagens-list">
+                        <div class="loading-placeholder">
+                            <div class="loading-icon">⏳</div>
+                            <p>Carregando histórico de passagens...</p>
+                        </div>
+                    </div>
+
+                    <div class="historico-pagination" id="historico-pagination" style="display: none;">
+                        <button class="btn btn-secondary" id="prev-page">← Anterior</button>
+                        <span class="page-info" id="page-info">Página 1 de 1</span>
+                        <button class="btn btn-secondary" id="next-page">Próxima →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="analise-tab">
+                <div class="analysis-container">
+                    <h3>📊 Análise Estatística da Movimentação</h3>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🚗</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Total de Passagens</span>
+                                <span class="stat-value" id="total-passagens">-</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📍</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Locais Únicos</span>
+                                <span class="stat-value" id="locais-unicos">-</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Período Ativo</span>
+                                <span class="stat-value" id="periodo-ativo">-</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏰</div>
+                            <div class="stat-info">
+                                <span class="stat-label">Frequência Média</span>
+                                <span class="stat-value" id="frequencia-media">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-charts">
+                        <div class="chart-section">
+                            <h4>📈 Gráfico de Movimentação por Período</h4>
+                            <div class="chart-container" id="movimentacao-chart">
+                                <p>Dados de movimentação serão exibidos aqui...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-section">
+                            <h4>🗺️ Mapa de Locais Mais Frequentes</h4>
+                            <div class="locations-list" id="locais-frequentes">
+                                <p>Lista de locais mais visitados será exibida aqui...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script>
+        // ========================================
+        // ===== VARIABLES AND INITIALIZATION ====
+        // ========================================
+        
+        // Base de API: quando abrindo via file:// use http://localhost:5000
+        // Helper para URL base da API - sempre usar proxy do webpack
+        const API_BASE = '';
+
+        let recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+        
+        // Limpar localStorage de dados incorretos se existirem
+        if (localStorage.getItem('lastSearchResults')) {
+            localStorage.removeItem('lastSearchResults');
+        }
+        
+        // DOM Elements
+        const placaInput = document.getElementById('placaInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const validationMessage = document.getElementById('validationMessage');
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsSection = document.getElementById('resultsSection');
+
+        // ========================================
+        // ===== PLACA VALIDATION ===============
+        // ========================================
+        
+        function validatePlaca(placa) {
+            if (!placa) return { valid: false, message: '' };
+            
+            const cleaned = placa.replace(/[^A-Z0-9]/g, '');
+            
+            // Formato antigo: ABC1234
+            const oldFormat = /^[A-Z]{3}\d{4}$/.test(cleaned);
+            // Formato Mercosul: ABC1D23
+            const mercosulFormat = /^[A-Z]{3}\d[A-Z]\d{2}$/.test(cleaned);
+            
+            if (oldFormat || mercosulFormat) {
+                return { valid: true, message: 'Formato válido' };
+            } else if (cleaned.length < 7) {
+                return { valid: false, message: 'Placa incompleta' };
+            } else {
+                return { valid: false, message: 'Formato inválido (ex: ABC1234 ou ABC1D23)' };
+            }
+        }
+
+        function formatPlaca(placa) {
+            const cleaned = placa.replace(/[^A-Z0-9]/g, '');
+            if (cleaned.length >= 3) {
+                if (cleaned.length <= 7) {
+                    // Formato antigo
+                    return cleaned.replace(/^([A-Z]{3})(\d{1,4})/, '$1-$2');
+                } else {
+                    // Formato Mercosul
+                    return cleaned.replace(/^([A-Z]{3})(\d[A-Z]\d{2})/, '$1-$2');
+                }
+            }
+            return cleaned;
+        }
+
+        // ========================================
+        // ===== EVENT LISTENERS ================
+        // ========================================
+        
+        placaInput.addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            if (value.length > 7) {
+                value = value.substring(0, 8);
+            }
+            
+            e.target.value = value;
+            
+            const validation = validatePlaca(value);
+            
+            // Update input appearance
+            placaInput.classList.remove('valid', 'invalid');
+            if (value) {
+                placaInput.classList.add(validation.valid ? 'valid' : 'invalid');
+            }
+            
+            // Update validation message
+            validationMessage.textContent = validation.message;
+            validationMessage.classList.remove('valid', 'invalid');
+            if (validation.message) {
+                validationMessage.classList.add(validation.valid ? 'valid' : 'invalid');
+            }
+            
+            // Show/hide clear button
+            clearBtn.style.display = value ? 'block' : 'none';
+            
+            // Enable/disable search button
+            searchBtn.disabled = !validation.valid;
+        });
+
+        clearBtn.addEventListener('click', function() {
+            placaInput.value = '';
+            placaInput.classList.remove('valid', 'invalid');
+            validationMessage.textContent = '';
+            validationMessage.classList.remove('valid', 'invalid');
+            clearBtn.style.display = 'none';
+            searchBtn.disabled = true;
+            placaInput.focus();
+        });
+
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const placa = placaInput.value.trim();
+            if (validatePlaca(placa).valid) {
+                performSearch(placa);
+            }
+        });
+
+        // ========================================
+        // ===== SEARCH FUNCTIONALITY ===========
+        // ========================================
+        
+        async function performSearch(placa) {
+            // Update button state
+            const originalBtnContent = searchBtn.innerHTML;
+            
+            try {
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '<div class="spinner"></div> Consultando...';
+                
+                // Limpar dados anteriores antes de fazer nova consulta
+                clearAllResults();
+                
+                // Add to recent searches
+                addToRecentSearches(placa);
+                
+                // Real API call
+                const response = await fetch(`/api/consulta_placa/${encodeURIComponent(placa)}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('Placa não encontrada nos registros');
+                    } else {
+                        throw new Error(`Erro do servidor: ${response.status}`);
+                    }
+                }
+                
+                const apiData = await response.json();
+                
+                // Process API response
+                const processedData = processApiResponse(apiData, placa);
+                
+                displayResults(processedData);
+                showToast('Consulta realizada com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('Erro na consulta:', error);
+                showToast('Erro ao realizar consulta. Tente novamente.', 'error');
+            } finally {
+                // Restore button state
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = originalBtnContent;
+            }
+        }
+
+        function processApiResponse(apiData, placa) {
+            // Nova estrutura da API: { veiculo, pessoas, passagens, ocorrencias, resumo }
+            const { veiculo = {}, pessoas = [], passagens = [], ocorrencias = [], resumo = {} } = apiData;
+            
+            return {
+                veiculo: veiculo,
+                pessoas: pessoas,
+                passagens: passagens,
+                ocorrencias: ocorrencias,
+                resumo: resumo
+            };
+        }
+
+        function displayResults(data) {
+            // Dados do veículo
+            const veiculo = data.veiculo || {};
+            const pessoas = data.pessoas || [];
+            const resumo = data.resumo || {};
+            
+            // Atualizar campos do veículo
+            document.getElementById('placaResult').textContent = veiculo.placa || '-';
+            document.getElementById('marcaModeloResult').textContent = veiculo.marca_modelo || '-';
+            document.getElementById('corResult').textContent = veiculo.cor || '-';
+            document.getElementById('tipoResult').textContent = veiculo.tipo || '-';
+            document.getElementById('anoModeloResult').textContent = veiculo.ano_modelo || '-';
+            document.getElementById('localEmplacamentoResult').textContent = veiculo.local_emplacamento || '-';
+            document.getElementById('veiculoIdResult').textContent = veiculo.id || '-';
+            document.getElementById('transferenciaRecenteResult').textContent = veiculo.transferencia_recente ? 'Sim' : 'Não';
+            document.getElementById('comunicacaoVendaResult').textContent = veiculo.comunicacao_venda ? 'Sim' : 'Não';
+            document.getElementById('crimePrfResult').textContent = veiculo.crime_prf ? 'Sim' : 'Não';
+            document.getElementById('abordagemPrfResult').textContent = veiculo.abordagem_prf ? 'Sim' : 'Não';
+            
+            // Dados das pessoas relacionadas
+            document.getElementById('totalPessoasResult').textContent = resumo.total_pessoas || 0;
+            document.getElementById('totalProprietariosResult').textContent = resumo.total_proprietarios || 0;
+            document.getElementById('totalCondutoresResult').textContent = resumo.total_condutores || 0;
+            document.getElementById('totalPassageirosResult').textContent = resumo.total_passageiros || 0;
+            document.getElementById('totalRelevantesResult').textContent = resumo.total_relevantes || 0;
+            
+            // Exibir lista de pessoas
+            displayPessoasList(pessoas);
+            
+            
+            // Update status badge
+            const totalOcorrencias = data.ocorrencias ? data.ocorrencias.length : 0;
+            const statusBadge = document.getElementById('statusResult');
+            statusBadge.textContent = totalOcorrencias > 0 ? 'Com Ocorrências' : 'Regular';
+            statusBadge.className = `status-badge ${totalOcorrencias > 0 ? 'status-alert' : 'status-regular'}`;
+            
+            // Show results section
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('pt-BR');
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString('pt-BR');
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        function displayPessoasList(pessoas) {
+            const pessoasList = document.getElementById('pessoasList');
+            
+            console.log('displayPessoasList called with:', pessoas);
+            
+            if (!pessoas || pessoas.length === 0) {
+                pessoasList.innerHTML = '<p style="color: #666; font-style: italic;">Nenhuma pessoa relacionada</p>';
+                return;
+            }
+            
+            let html = '';
+            pessoas.forEach((pessoa, index) => {
+                console.log('Processing pessoa:', pessoa);
+                const classificacao = pessoa.classificacao || 'Não Classificado';
+                const nome = pessoa.nome || 'Nome não informado';
+                const cpf = pessoa.cpf_cnpj || 'CPF não informado';
+                
+                // Determinar cor da classificação (prioridade: proprietario > condutor > passageiro > relevante)
+                let classificacaoClass = 'classificacao-normal';
+                if (pessoa.proprietario) {
+                    classificacaoClass = 'classificacao-proprietario';
+                } else if (pessoa.condutor) {
+                    classificacaoClass = 'classificacao-condutor';
+                } else if (pessoa.passageiro) {
+                    classificacaoClass = 'classificacao-passageiro';
+                } else if (pessoa.relevante) {
+                    classificacaoClass = 'classificacao-relevante';
+                }
+                
+                html += `
+                    <div class="pessoa-item" style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; margin-bottom: 8px; background: #f8fafc;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <strong style="color: #2d3748;">${nome}</strong>
+                            <span class="${classificacaoClass}" style="padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                ${classificacao}
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: #666;">
+                            <strong>CPF:</strong> ${cpf}
+                        </div>
+                        <div style="font-size: 11px; color: #888; margin-top: 3px;">
+                            ${pessoa.detalhes ? 
+                                `Proprietário: ${pessoa.detalhes.eh_proprietario ? 'Sim' : 'Não'} | 
+                                 Condutor: ${pessoa.detalhes.eh_condutor ? 'Sim' : 'Não'} | 
+                                 Passageiro: ${pessoa.detalhes.eh_passageiro ? 'Sim' : 'Não'} | 
+                                 Relevante: ${pessoa.detalhes.eh_relevante ? 'Sim' : 'Não'}` : 
+                                'Detalhes não disponíveis'
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+            
+            pessoasList.innerHTML = html;
+        }
+
+        // ========================================
+        // ===== TAB FUNCTIONALITY ==============
+        // ========================================
+        
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Carregar estatísticas de treinamento se for a aba de treinamento
+            if (tabName === 'treinamento') {
+                carregarEstatisticasTreinamento();
+            }
+        }
+
+        // ========================================
+        // ===== UTILITY FUNCTIONS ==============
+        // ========================================
+        
+        function addToRecentSearches(placa) {
+            const formattedPlaca = formatPlaca(placa);
+            const searchItem = {
+                placa: formattedPlaca,
+                timestamp: new Date().toISOString(),
+                displayTime: 'Agora'
+            };
+            
+            // Remove if already exists
+            recentSearches = recentSearches.filter(item => item.placa !== formattedPlaca);
+            
+            // Add to beginning
+            recentSearches.unshift(searchItem);
+            
+            // Keep only last 10
+            recentSearches = recentSearches.slice(0, 10);
+            
+            // Save to localStorage
+            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+            
+            // Update display
+            updateRecentSearchesDisplay();
+        }
+
+        function updateRecentSearchesDisplay() {
+            const recentSearchesDiv = document.getElementById('recentSearches');
+            const recentList = document.getElementById('recentList');
+            
+            if (recentSearches.length > 0) {
+                recentSearchesDiv.style.display = 'block';
+                recentList.innerHTML = recentSearches.map(item => `
+                    <div class="recent-item">
+                        <span class="recent-placa" onclick="searchRecentPlaca('${item.placa}')">${item.placa}</span>
+                        <span class="recent-time">${item.displayTime}</span>
+                    </div>
+                `).join('');
+            } else {
+                recentSearchesDiv.style.display = 'none';
+            }
+        }
+
+        function searchRecentPlaca(placa) {
+            placaInput.value = placa.replace('-', '');
+            const event = new Event('input');
+            placaInput.dispatchEvent(event);
+            performSearch(placa.replace('-', ''));
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.getElementById('toastContainer').appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ========================================
+        // ===== QUICK ACTIONS ==================
+        // ========================================
+        
+
+        function exportResults() {
+            showToast('Exportando resultados...', 'success');
+            // Implementation here
+        }
+
+        // ========================================
+        // ===== NAVIGATION ======================
+        // ========================================
+        
+        function initializeNavigation() {
+            // Adicionar event listeners para os links do menu
+            const navLinks = document.querySelectorAll('.sidebar-menu a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                    
+                    // Atualizar classe ativa
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+        
+        function showSection(sectionName) {
+            // Atualizar título e subtítulo
+            const titleElement = document.getElementById('content-title');
+            const subtitleElement = document.getElementById('content-subtitle');
+            
+            // Esconder todas as seções
+            const sections = document.querySelectorAll('.card');
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            switch(sectionName) {
+                case 'consulta':
+                    titleElement.textContent = '🔍 Consulta de Placas';
+                    subtitleElement.textContent = 'Consulte informações detalhadas sobre veículos e pessoas relacionadas';
+                    showConsultaSection();
+                    break;
+                case 'nova-ocorrencia':
+                    titleElement.textContent = '📝 Inserir Ocorrência';
+                    subtitleElement.textContent = 'Registre novas ocorrências no sistema';
+                    showNovaOcorrenciaSection();
+                    break;
+                case 'treinamento':
+                    titleElement.textContent = '🎓 Treinamento IA';
+                    subtitleElement.textContent = 'Treine o modelo de IA com seus feedbacks';
+                    showTreinamentoSection();
+                    break;
+                case 'estatisticas':
+                    titleElement.textContent = '📊 Estatísticas';
+                    subtitleElement.textContent = 'Visualize estatísticas e métricas do sistema';
+                    showEstatisticasSection();
+                    break;
+            }
+        }
+        
+        function showConsultaSection() {
+            // Mostrar seção de consulta
+            const searchSection = document.querySelector('.search-section');
+            const resultsSection = document.querySelector('.results-section');
+            
+            if (searchSection) searchSection.style.display = 'block';
+            if (resultsSection) resultsSection.style.display = 'block';
+        }
+        
+        function showNovaOcorrenciaSection() {
+            // Criar seção de nova ocorrência se não existir
+            let section = document.getElementById('nova-ocorrencia-section');
+            if (!section) {
+                section = document.createElement('div');
+                section.id = 'nova-ocorrencia-section';
+                section.className = 'card';
+                section.innerHTML = `
+                    <h3>📝 Nova Ocorrência</h3>
+                    <p>Funcionalidade em desenvolvimento...</p>
+                    <div class="form-group">
+                        <label>Placa do Veículo:</label>
+                        <input type="text" placeholder="ABC1234" maxlength="7">
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição da Ocorrência:</label>
+                        <textarea rows="4" placeholder="Descreva a ocorrência..."></textarea>
+                    </div>
+                    <button class="btn btn-primary">Salvar Ocorrência</button>
+                `;
+                document.querySelector('.main-content').appendChild(section);
+            }
+            section.style.display = 'block';
+        }
+        
+        function showTreinamentoSection() {
+            // Mostrar seção de treinamento se existir
+            const trainingSection = document.getElementById('trainingSection');
+            if (trainingSection) {
+                trainingSection.style.display = 'block';
+                // Carregar dados quando a seção for exibida
+                loadTrainingData();
+            } else {
+                // Criar seção básica se não existir
+                let section = document.createElement('div');
+                section.id = 'trainingSection';
+                section.className = 'card';
+                section.innerHTML = `
+                    <h3>🎓 Treinamento IA</h3>
+                    <p>Funcionalidade de treinamento em desenvolvimento...</p>
+                `;
+                document.querySelector('.main-content').appendChild(section);
+            }
+        }
+        
+        function showEstatisticasSection() {
+            // Criar seção de estatísticas se não existir
+            let section = document.getElementById('estatisticas-section');
+            if (!section) {
+                section = document.createElement('div');
+                section.id = 'estatisticas-section';
+                section.className = 'card';
+                section.innerHTML = `
+                    <h3>📊 Estatísticas do Sistema</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>Total de Consultas</h4>
+                            <p class="stat-number">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Veículos Analisados</h4>
+                            <p class="stat-number">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Feedbacks Recebidos</h4>
+                            <p class="stat-number">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Precisão do Modelo</h4>
+                            <p class="stat-number">0%</p>
+                        </div>
+                    </div>
+                `;
+                document.querySelector('.main-content').appendChild(section);
+            }
+            section.style.display = 'block';
+        }
+
+        // ========================================
+        // ===== INITIALIZATION =================
+        // ========================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar navegação
+            initializeNavigation();
+            
+            updateRecentSearchesDisplay();
+            placaInput.focus();
+            
+            // Limpar todos os dados exibidos para garantir que não há dados incorretos
+            clearAllResults();
+            
+            // Update recent searches time display
+            setInterval(() => {
+                updateRecentSearchesTimeDisplay();
+            }, 60000); // Update every minute
+        });
+        
+        function clearAllResults() {
+            // Limpar todos os campos de resultado
+            const fields = [
+                'placaResult', 'marcaModeloResult', 'corResult', 'tipoResult', 
+                'anoModeloResult', 'localEmplacamentoResult', 'veiculoIdResult',
+                'transferenciaRecenteResult', 'comunicacaoVendaResult', 'crimePrfResult', 'abordagemPrfResult',
+                'totalPessoasResult', 'totalProprietariosResult', 'totalCondutoresResult', 'totalPassageirosResult', 'totalRelevantesResult',
+                'consultasResult', 'ultimaConsultaResult', 'ocorrenciasResult', 
+                'riscorResult'
+            ];
+            
+            fields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                if (fieldId === 'consultasResult' || fieldId === 'ocorrenciasResult') {
+                    element.textContent = '0';
+                } else if (fieldId === 'riscorResult') {
+                    element.textContent = 'Baixo';
+                } else {
+                    element.textContent = '-';
+                }
+                }
+            });
+            
+            // Resetar status badge
+            const statusElement = document.getElementById('statusResult');
+            if (statusElement) {
+                statusElement.textContent = 'Regular';
+                statusElement.className = 'status-badge status-regular';
+            }
+            
+            // Limpar lista de pessoas
+            const pessoasList = document.getElementById('pessoasList');
+            if (pessoasList) {
+                pessoasList.innerHTML = '<p style="color: #666; font-style: italic;">Nenhuma pessoa relacionada</p>';
+            }
+            
+            // Esconder seção de resultados
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                resultsSection.style.display = 'none';
+            }
+        }
+
+        function updateRecentSearchesTimeDisplay() {
+            recentSearches.forEach((item, index) => {
+                const now = new Date();
+                const searchTime = new Date(item.timestamp);
+                const diffMinutes = Math.floor((now - searchTime) / (1000 * 60));
+                
+                if (diffMinutes < 1) {
+                    item.displayTime = 'Agora';
+                } else if (diffMinutes < 60) {
+                    item.displayTime = `Há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+                } else if (diffMinutes < 1440) {
+                    const hours = Math.floor(diffMinutes / 60);
+                    item.displayTime = `Há ${hours} hora${hours > 1 ? 's' : ''}`;
+                } else {
+                    const days = Math.floor(diffMinutes / 1440);
+                    item.displayTime = `Há ${days} dia${days > 1 ? 's' : ''}`;
+                }
+            });
+            
+            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+            updateRecentSearchesDisplay();
+        }
+
+        // ========================================
+        // ===== ADVANCED SEARCH MODAL ==========
+        // ========================================
+        
+        document.getElementById('advancedBtn').addEventListener('click', function() {
+            showAdvancedSearch();
+        });
+
+        function showAdvancedSearch() {
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 2rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2 style="margin: 0; color: #2d3748;">🔍 Busca Avançada</h2>
+                            <button onclick="this.closest('div').parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                        </div>
+                        
+                        <form id="advancedSearchForm">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Placa:</label>
+                                <input type="text" id="advPlaca" class="placa-input" placeholder="ABC1234 ou ABC1D23" style="width: 100%;">
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">CPF do Condutor:</label>
+                                <input type="text" id="advCpf" placeholder="000.000.000-00" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nome do Condutor:</label>
+                                <input type="text" id="advNome" placeholder="João Silva" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Cidade:</label>
+                                    <input type="text" id="advCidade" placeholder="São Paulo" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">UF:</label>
+                                    <select id="advUf" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                        <option value="">Todos</option>
+                                        <option value="SP">SP</option>
+                                        <option value="RJ">RJ</option>
+                                        <option value="MG">MG</option>
+                                        <option value="RS">RS</option>
+                                        <option value="PR">PR</option>
+                                        <option value="SC">SC</option>
+                                        <!-- Add more states -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Período de Consulta:</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <input type="date" id="advDataInicio" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                    <input type="date" id="advDataFim" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 2rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Filtros:</label>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroOcorrencias"> Com ocorrências
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroMultas"> Com multas
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <input type="checkbox" id="filtroRisco"> Alto risco
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                                <button type="button" onclick="this.closest('div').parentElement.remove()" style="padding: 0.8rem 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                                    Cancelar
+                                </button>
+                                <button type="submit" style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                    🔍 Buscar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Handle advanced search form
+            document.getElementById('advancedSearchForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                performAdvancedSearch();
+                modal.remove();
+            });
+        }
+
+        function performAdvancedSearch() {
+            const formData = {
+                placa: document.getElementById('advPlaca').value,
+                cpf: document.getElementById('advCpf').value,
+                nome: document.getElementById('advNome').value,
+                cidade: document.getElementById('advCidade').value,
+                uf: document.getElementById('advUf').value,
+                dataInicio: document.getElementById('advDataInicio').value,
+                dataFim: document.getElementById('advDataFim').value,
+                filtros: {
+                    ocorrencias: document.getElementById('filtroOcorrencias').checked,
+                    multas: document.getElementById('filtroMultas').checked,
+                    risco: document.getElementById('filtroRisco').checked
+                }
+            };
+            
+            showToast('Realizando busca avançada...', 'info');
+            
+            // Simulate advanced search
+            setTimeout(() => {
+                showAdvancedResults(formData);
+            }, 2000);
+        }
+
+        function showAdvancedResults(searchData) {
+            // Mock advanced search results
+            const results = [
+                {
+                    placa: 'ABC1234',
+                    proprietario: 'João Silva',
+                    cidade: 'São Paulo',
+                    ocorrencias: 2,
+                    ultimaConsulta: '2024-01-15'
+                },
+                {
+                    placa: 'XYZ5678',
+                    proprietario: 'Maria Santos',
+                    cidade: 'Rio de Janeiro', 
+                    ocorrencias: 0,
+                    ultimaConsulta: '2024-01-10'
+                }
+            ];
+            
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; border-radius: 15px; padding: 2rem; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h2 style="margin: 0; color: #2d3748;">📋 Resultados da Busca Avançada</h2>
+                            <button onclick="this.closest('div').parentElement.remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <p><strong>Encontrados:</strong> ${results.length} resultado(s)</p>
+                        </div>
+                        
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${results.map(result => `
+                                <div style="background: #f7fafc; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid ${result.ocorrencias > 0 ? '#f56565' : '#48bb78'};">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                        <div><strong>Placa:</strong> ${result.placa}</div>
+                                        <div><strong>Condutor:</strong> ${result.proprietario}</div>
+                                        <div><strong>Cidade:</strong> ${result.cidade}</div>
+                                        <div><strong>Ocorrências:</strong> <span style="color: ${result.ocorrencias > 0 ? '#c53030' : '#22543d'}">${result.ocorrencias}</span></div>
+                                    </div>
+                                    <div style="margin-top: 1rem;">
+                                        <button onclick="searchRecentPlaca('${result.placa}')" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 0.5rem;">
+                                            Ver Detalhes
+                                        </button>
+                                        <button onclick="addToFavorites('${result.placa}')" style="padding: 0.5rem 1rem; background: #48bb78; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                            ⭐ Favoritar
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="margin-top: 2rem; text-align: center;">
+                            <button onclick="exportAdvancedResults()" style="padding: 0.8rem 1.5rem; background: #48bb78; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 1rem;">
+                                📤 Exportar Resultados
+                            </button>
+                            <button onclick="this.closest('div').parentElement.remove()" style="padding: 0.8rem 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.querySelector('div').remove = () => modal.remove();
+        }
+
+        function addToFavorites(placa) {
+            if (!favorites.includes(placa)) {
+                favorites.push(placa);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                showToast(`Placa ${placa} adicionada aos favoritos!`, 'success');
+            } else {
+                showToast(`Placa ${placa} já está nos favoritos!`, 'info');
+            }
+        }
+
+        function exportAdvancedResults() {
+            showToast('Exportando resultados da busca avançada...', 'success');
+            // Implementation for export functionality
+        }
+
+        // ========================================
+        // ===== KEYBOARD SHORTCUTS =============
+        // ========================================
+        
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + K to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                placaInput.focus();
+                placaInput.select();
+            }
+            
+            // Ctrl/Cmd + Shift + F for advanced search
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+                e.preventDefault();
+                showAdvancedSearch();
+            }
+            
+            // ESC to clear search
+            if (e.key === 'Escape' && document.activeElement === placaInput) {
+                clearBtn.click();
+            }
+        });
+
+        // ========================================
+        // ===== ACCESSIBILITY FEATURES =========
+        // ========================================
+        
+        // ARIA labels and keyboard navigation
+        placaInput.setAttribute('aria-describedby', 'validationMessage');
+        placaInput.setAttribute('aria-label', 'Digite a placa do veículo');
+        
+        // Voice search (if supported)
+        if ('webkitSpeechRecognition' in window) {
+            const voiceBtn = document.createElement('button');
+            voiceBtn.innerHTML = '🎤';
+            voiceBtn.className = 'btn btn-secondary';
+            voiceBtn.title = 'Busca por voz';
+            voiceBtn.style.marginLeft = '0.5rem';
+            
+            voiceBtn.addEventListener('click', startVoiceRecognition);
+            document.querySelector('.search-form > div:last-child').appendChild(voiceBtn);
+        }
+
+        function startVoiceRecognition() {
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                showToast('Fale a placa do veículo...', 'info');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                const cleanTranscript = transcript.replace(/\s+/g, '').toUpperCase();
+                placaInput.value = cleanTranscript;
+                
+                const inputEvent = new Event('input');
+                placaInput.dispatchEvent(inputEvent);
+                
+                showToast(`Placa reconhecida: ${cleanTranscript}`, 'success');
+            };
+
+            recognition.onerror = (event) => {
+                showToast('Erro no reconhecimento de voz', 'error');
+            };
+
+            recognition.start();
+        }
+
+        // ========================================
+        // ===== PRINT FUNCTIONALITY ============
+        // ========================================
+        
+        function printResults() {
+            const printWindow = window.open('', '_blank');
+            const resultData = {
+                placa: document.getElementById('placaResult')?.textContent || '-',
+                marcaModelo: document.getElementById('marcaModeloResult')?.textContent || '-',
+                cor: document.getElementById('corResult')?.textContent || '-',
+                tipo: document.getElementById('tipoResult')?.textContent || '-',
+                anoModelo: document.getElementById('anoModeloResult')?.textContent || '-',
+                localEmplacamento: document.getElementById('localEmplacamentoResult')?.textContent || '-',
+                veiculoId: document.getElementById('veiculoIdResult')?.textContent || '-',
+                transferenciaRecente: document.getElementById('transferenciaRecenteResult')?.textContent || '-',
+                comunicacaoVenda: document.getElementById('comunicacaoVendaResult')?.textContent || '-',
+                crimePrf: document.getElementById('crimePrfResult')?.textContent || '-',
+                abordagemPrf: document.getElementById('abordagemPrfResult')?.textContent || '-',
+                totalPessoas: document.getElementById('totalPessoasResult')?.textContent || '0',
+                totalProprietarios: document.getElementById('totalProprietariosResult')?.textContent || '0',
+                totalCondutores: document.getElementById('totalCondutoresResult')?.textContent || '0',
+                totalPassageiros: document.getElementById('totalPassageirosResult')?.textContent || '0',
+                totalRelevantes: document.getElementById('totalRelevantesResult')?.textContent || '0',
+                consultas: document.getElementById('consultasResult')?.textContent || '0',
+                ultimaConsulta: document.getElementById('ultimaConsultaResult')?.textContent || '-',
+                ocorrencias: document.getElementById('ocorrenciasResult')?.textContent || '0',
+                risco: document.getElementById('riscorResult')?.textContent || 'Baixo'
+            };
+            
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Relatório de Consulta - ${resultData.placa}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .header { text-align: center; margin-bottom: 30px; }
+                            .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                            .label { font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>🛡️ Sentinela IA</h1>
+                            <h2>Relatório de Consulta de Placa</h2>
+                            <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        
+                        <h3>🚗 Dados do Veículo</h3>
+                        <div class="info-row">
+                            <span class="label">Placa:</span>
+                            <span>${resultData.placa}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Marca/Modelo:</span>
+                            <span>${resultData.marcaModelo}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Cor:</span>
+                            <span>${resultData.cor}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Tipo:</span>
+                            <span>${resultData.tipo}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Ano/Modelo:</span>
+                            <span>${resultData.anoModelo}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Local Emplacamento:</span>
+                            <span>${resultData.localEmplacamento}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">ID:</span>
+                            <span>${resultData.veiculoId}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Transferência Recente:</span>
+                            <span>${resultData.transferenciaRecente}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Comunicação Venda:</span>
+                            <span>${resultData.comunicacaoVenda}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Crime PRF:</span>
+                            <span>${resultData.crimePrf}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Abordagem PRF:</span>
+                            <span>${resultData.abordagemPrf}</span>
+                        </div>
+                        
+                        <h3>👤 Pessoas Relacionadas</h3>
+                        <div class="info-row">
+                            <span class="label">Total de pessoas:</span>
+                            <span>${resultData.totalPessoas}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Proprietários:</span>
+                            <span>${resultData.totalProprietarios}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Condutores:</span>
+                            <span>${resultData.totalCondutores}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Passageiros:</span>
+                            <span>${resultData.totalPassageiros}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Relevantes:</span>
+                            <span>${resultData.totalRelevantes}</span>
+                        </div>
+                        
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Add print button to results section
+        if (resultsSection) {
+            const printBtn = document.createElement('button');
+            printBtn.className = 'btn btn-secondary';
+            printBtn.innerHTML = '🖨️ Imprimir';
+            printBtn.onclick = printResults;
+            document.querySelector('.results-header').appendChild(printBtn);
+        }
+
+        // ========================================
+        // ===== FINAL SETUP ====================
+        // ========================================
+        
+        // Set focus to search input on page load
+        window.addEventListener('load', () => {
+            placaInput.focus();
+        });
+
+        // Show tips on first visit
+        if (!localStorage.getItem('hasVisited')) {
+            setTimeout(() => {
+                showToast('💡 Dica: Use Ctrl+K para focar na busca rapidamente!', 'info');
+                localStorage.setItem('hasVisited', 'true');
+            }, 2000);
+        }
+        // ========================================
+        // ===== TRAINING SYSTEM FUNCTIONS =======
+        // ========================================
+        
+        function carregarEstatisticasTreinamento() {
+            // Carregar estatísticas de feedback do backend
+            fetch('/api/feedback/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-feedbacks').textContent = data.total || 0;
+                    document.getElementById('feedbacks-corretos').textContent = data.corretos || 0;
+                    document.getElementById('feedbacks-incorretos').textContent = data.incorretos || 0;
+                    document.getElementById('feedbacks-duvidosos').textContent = data.duvidosos || 0;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar estatísticas:', error);
+                    // Valores padrão em caso de erro
+                    document.getElementById('total-feedbacks').textContent = '0';
+                    document.getElementById('feedbacks-corretos').textContent = '0';
+                    document.getElementById('feedbacks-incorretos').textContent = '0';
+                    document.getElementById('feedbacks-duvidosos').textContent = '0';
+                });
+        }
+        
+        function preencherDadosTreinamento(textoRelato, classificacaoModelo, confiancaModelo) {
+            // Preencher dados da análise atual no formulário de treinamento
+            document.getElementById('training-texto').value = textoRelato || '';
+            document.getElementById('model-classification').textContent = classificacaoModelo || '-';
+            document.getElementById('model-confidence').textContent = confiancaModelo ? `${(confiancaModelo * 100).toFixed(1)}%` : '-';
+        }
+        
+        function salvarFeedback() {
+            const textoRelato = document.getElementById('training-texto').value;
+            const classificacaoCorreta = document.querySelector('input[name="correct-classification"]:checked');
+            const feedback = document.querySelector('input[name="feedback"]:checked');
+            const observacoes = document.getElementById('training-observacoes').value;
+            
+            // Validações
+            if (!textoRelato.trim()) {
+                showToast('Por favor, informe o texto do relato', 'error');
+                return;
+            }
+            
+            if (!classificacaoCorreta) {
+                showToast('Por favor, selecione a classificação correta', 'error');
+                return;
+            }
+            
+            if (!feedback) {
+                showToast('Por favor, forneça seu feedback', 'error');
+                return;
+            }
+            
+            // Preparar dados para envio
+            const dadosFeedback = {
+                placa: '', // Campo removido - não é necessário para treinamento semântico
+                texto_relato: textoRelato,
+                classificacao_usuario: classificacaoCorreta.value,
+                classificacao_modelo: document.getElementById('model-classification').textContent,
+                confianca_modelo: parseFloat(document.getElementById('model-confidence').textContent.replace('%', '')) / 100,
+                feedback_usuario: feedback.value,
+                observacoes: observacoes,
+                usuario: 'usuario_frontend', // Pode ser obtido de um sistema de login
+                contexto: 'analise_semantica'
+            };
+            
+            // Enviar para o backend
+            fetch(API_BASE + '/api/feedback/salvar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dadosFeedback)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Feedback salvo com sucesso!', 'success');
+                    limparFormularioTreinamento();
+                    carregarEstatisticasTreinamento(); // Atualizar estatísticas
+                } else {
+                    showToast(`Erro ao salvar feedback: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar feedback:', error);
+                showToast('Erro ao salvar feedback. Tente novamente.', 'error');
+            });
+        }
+        
+        function aplicarClassificacaoModeloTab() {
+            const textoRelato = document.getElementById('training-texto').value.trim();
+            
+            if (!textoRelato) {
+                showToast('Por favor, insira o texto do relato primeiro', 'error');
+                return;
+            }
+            
+            const btnAplicar = document.getElementById('btn-aplicar-classificacao-tab');
+            const justificationBox = document.getElementById('model-justification');
+            
+            // Mostrar loading
+            btnAplicar.disabled = true;
+            btnAplicar.innerHTML = '<span class="spinner"></span> Analisando...';
+            justificationBox.className = 'justification-box loading';
+            justificationBox.innerHTML = '<p>Analisando texto com modelo de IA...</p>';
+            
+            // Chamar API de análise (usa rota existente no backend)
+            fetch(API_BASE + '/api/analise_relato/lote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    relatos: [textoRelato]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && Array.isArray(data.resultados) && data.resultados.length > 0) {
+                    const r = data.resultados[0] || {};
+                    const classificacao = r.classe || r.classificacao || 'Não Classificado';
+                    const confianca = (r.confianca !== undefined) ? r.confianca : r.confidence;
+                    const score = (r.pontuacao !== undefined) ? r.pontuacao : r.score;
+                    const palavras = Array.isArray(r.keywords)
+                        ? r.keywords.map(k => typeof k === 'string' ? k : (k.termo || '')).filter(Boolean)
+                        : [];
+                    const padroes = r.padroes || (r.indicadores && r.indicadores.padroes) || null;
+                    const motivos = (r.indicadores && r.indicadores.motivos) || (r.contexto && r.contexto.motivos) || null;
+                    const metodo = r.metodo || r.method || 'modelo';
+
+                    // Atualizar classificação
+                    document.getElementById('model-classification').textContent = classificacao;
+                    document.getElementById('model-confidence').textContent = (confianca !== undefined && confianca !== null)
+                        ? `${(Number(confianca) * 100).toFixed(1)}%` : '-';
+                    document.getElementById('model-score').textContent = (score !== undefined && score !== null)
+                        ? Number(score).toFixed(0) : '-';
+
+                    // Montar justificativa
+                    let justificativaHtml = `<p><strong>Método:</strong> ${metodo}</p>`;
+                    if (Array.isArray(motivos) && motivos.length) {
+                        justificativaHtml += `<p><strong>Motivos:</strong> ${motivos.join(', ')}</p>`;
+                    }
+                    if (Array.isArray(palavras) && palavras.length) {
+                        justificativaHtml += `<p><strong>Palavras-chave:</strong> ${palavras.slice(0, 10).join(', ')}</p>`;
+                    }
+                    if (Array.isArray(padroes) && padroes.length) {
+                        justificativaHtml += `<p><strong>Padrões:</strong> ${padroes.join(', ')}</p>`;
+                    }
+
+                    justificationBox.className = 'justification-box';
+                    justificationBox.innerHTML = justificativaHtml || '<p>Análise realizada pelo modelo de IA.</p>';
+                    
+                    showToast('Classificação aplicada com sucesso!', 'success');
+                } else {
+                    throw new Error('Resposta inválida da API');
+                }
+            })
+            .catch(error => {
+                console.error('Erro na análise:', error);
+                
+                // Mostrar erro
+                justificationBox.className = 'justification-box';
+                justificationBox.innerHTML = '<p style="color: #e53e3e;">Erro ao analisar o texto. Tente novamente.</p>';
+                
+                showToast('Erro ao aplicar classificação do modelo', 'error');
+            })
+            .finally(() => {
+                // Restaurar botão
+                btnAplicar.disabled = false;
+                btnAplicar.innerHTML = '<span class="icon">🤖</span> Aplicar Classificação do Modelo';
+            });
+        }
+        
+        function limparFormularioTreinamento() {
+            // Limpar todos os campos do formulário
+            document.getElementById('training-texto').value = '';
+            document.getElementById('training-observacoes').value = '';
+            
+            // Limpar radio buttons
+            document.querySelectorAll('input[name="correct-classification"]').forEach(radio => {
+                radio.checked = false;
+            });
+            document.querySelectorAll('input[name="feedback"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Limpar resultados do modelo
+            document.getElementById('model-classification').textContent = '-';
+            document.getElementById('model-confidence').textContent = '-';
+            document.getElementById('model-score').textContent = '-';
+            
+            // Limpar justificativa
+            const justificationBox = document.getElementById('model-justification');
+            justificationBox.className = 'justification-box';
+            justificationBox.innerHTML = '<p>Clique em "Aplicar Classificação do Modelo" para ver a análise...</p>';
+        }
+        
+        // Função para preencher automaticamente dados da análise IA no treinamento
+        function transferirParaTreinamento(textoRelato, classificacao, confianca) {
+            // Preencher dados no formulário de treinamento
+            preencherDadosTreinamento(textoRelato, classificacao, confianca);
+            
+            // Mudar para a aba de treinamento
+            showTab('treinamento');
+        }
+        
+        // ========================================
+        // ===== FUNÇÕES DE TREINAMENTO PRINCIPAL ====
+        // ========================================
+        
+        function mostrarTreinamento() {
+            // Mostrar seção de treinamento
+            const trainingSection = document.getElementById('trainingSection');
+            if (trainingSection) {
+                trainingSection.style.display = 'block';
+                
+                // Carregar estatísticas
+                carregarEstatisticasTreinamentoMain();
+                
+                // Scroll para a seção
+                trainingSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        function ocultarTreinamento() {
+            // Ocultar seção de treinamento
+            const trainingSection = document.getElementById('trainingSection');
+            if (trainingSection) {
+                trainingSection.style.display = 'none';
+            }
+        }
+        
+        function carregarEstatisticasTreinamentoMain() {
+            // Carregar estatísticas de feedback do backend
+            fetch('/api/feedback/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-feedbacks-main').textContent = data.total || 0;
+                    document.getElementById('feedbacks-corretos-main').textContent = data.corretos || 0;
+                    document.getElementById('feedbacks-incorretos-main').textContent = data.incorretos || 0;
+                    document.getElementById('feedbacks-duvidosos-main').textContent = data.duvidosos || 0;
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar estatísticas:', error);
+                    // Valores padrão em caso de erro
+                    document.getElementById('total-feedbacks-main').textContent = '0';
+                    document.getElementById('feedbacks-corretos-main').textContent = '0';
+                    document.getElementById('feedbacks-incorretos-main').textContent = '0';
+                    document.getElementById('feedbacks-duvidosos-main').textContent = '0';
+                });
+        }
+        
+        function preencherDadosTreinamentoMain(textoRelato, classificacaoModelo, confiancaModelo) {
+            // Preencher dados da análise atual no formulário de treinamento principal
+            document.getElementById('training-texto-main').value = textoRelato || '';
+            document.getElementById('model-classification-main').textContent = classificacaoModelo || '-';
+            document.getElementById('model-confidence-main').textContent = confiancaModelo ? `${(confiancaModelo * 100).toFixed(1)}%` : '-';
+        }
+        
+        function aplicarClassificacaoModelo() {
+            const textoRelato = document.getElementById('training-texto-main').value.trim();
+            
+            if (!textoRelato) {
+                showToast('Por favor, insira o texto do relato primeiro', 'error');
+                return;
+            }
+            
+            const btnAplicar = document.getElementById('btn-aplicar-classificacao');
+            const justificationBox = document.getElementById('model-justification-main');
+            
+            // Mostrar loading
+            btnAplicar.disabled = true;
+            btnAplicar.innerHTML = '<span class="spinner"></span> Analisando...';
+            justificationBox.className = 'justification-box loading';
+            justificationBox.innerHTML = '<p>Analisando texto com modelo de IA...</p>';
+            
+            // Chamar API de análise (usa rota existente no backend)
+            fetch(API_BASE + '/api/analise_relato/lote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    relatos: [textoRelato]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && Array.isArray(data.resultados) && data.resultados.length > 0) {
+                    const r = data.resultados[0] || {};
+                    const classificacao = r.classe || r.classificacao || 'Não Classificado';
+                    const confianca = (r.confianca !== undefined) ? r.confianca : r.confidence;
+                    const score = (r.pontuacao !== undefined) ? r.pontuacao : r.score;
+                    const palavras = Array.isArray(r.keywords)
+                        ? r.keywords.map(k => typeof k === 'string' ? k : (k.termo || '')).filter(Boolean)
+                        : [];
+                    const padroes = r.padroes || (r.indicadores && r.indicadores.padroes) || null;
+                    const motivos = (r.indicadores && r.indicadores.motivos) || (r.contexto && r.contexto.motivos) || null;
+                    const metodo = r.metodo || r.method || 'modelo';
+
+                    // Atualizar classificação
+                    document.getElementById('model-classification-main').textContent = classificacao;
+                    document.getElementById('model-confidence-main').textContent = (confianca !== undefined && confianca !== null)
+                        ? `${(Number(confianca) * 100).toFixed(1)}%` : '-';
+                    document.getElementById('model-score-main').textContent = (score !== undefined && score !== null)
+                        ? Number(score).toFixed(0) : '-';
+
+                    // Montar justificativa
+                    let justificativaHtml = `<p><strong>Método:</strong> ${metodo}</p>`;
+                    if (Array.isArray(motivos) && motivos.length) {
+                        justificativaHtml += `<p><strong>Motivos:</strong> ${motivos.join(', ')}</p>`;
+                    }
+                    if (Array.isArray(palavras) && palavras.length) {
+                        justificativaHtml += `<p><strong>Palavras-chave:</strong> ${palavras.slice(0, 10).join(', ')}</p>`;
+                    }
+                    if (Array.isArray(padroes) && padroes.length) {
+                        justificativaHtml += `<p><strong>Padrões:</strong> ${padroes.join(', ')}</p>`;
+                    }
+
+                    justificationBox.className = 'justification-box';
+                    justificationBox.innerHTML = justificativaHtml || '<p>Análise realizada pelo modelo de IA.</p>';
+                    
+                    showToast('Classificação aplicada com sucesso!', 'success');
+                } else {
+                    throw new Error('Resposta inválida da API');
+                }
+            })
+            .catch(error => {
+                console.error('Erro na análise:', error);
+                
+                // Mostrar erro
+                justificationBox.className = 'justification-box';
+                justificationBox.innerHTML = '<p style="color: #e53e3e;">Erro ao analisar o texto. Tente novamente.</p>';
+                
+                showToast('Erro ao aplicar classificação do modelo', 'error');
+            })
+            .finally(() => {
+                // Restaurar botão
+                btnAplicar.disabled = false;
+                btnAplicar.innerHTML = '<span class="icon">🤖</span> Aplicar Classificação do Modelo';
+            });
+        }
+        
+        function salvarFeedbackMain() {
+            const textoRelato = document.getElementById('training-texto-main').value;
+            const classificacaoCorreta = document.querySelector('input[name="correct-classification-main"]:checked');
+            const feedback = document.querySelector('input[name="feedback-main"]:checked');
+            const observacoes = document.getElementById('training-observacoes-main').value;
+            
+            // Validações
+            if (!textoRelato.trim()) {
+                showToast('Por favor, informe o texto do relato', 'error');
+                return;
+            }
+            
+            if (!classificacaoCorreta) {
+                showToast('Por favor, selecione a classificação correta', 'error');
+                return;
+            }
+            
+            if (!feedback) {
+                showToast('Por favor, forneça seu feedback', 'error');
+                return;
+            }
+            
+            // Preparar dados para envio
+            const dadosFeedback = {
+                placa: '', // Campo removido - não é necessário para treinamento semântico
+                texto_relato: textoRelato,
+                classificacao_usuario: classificacaoCorreta.value,
+                classificacao_modelo: document.getElementById('model-classification-main').textContent,
+                confianca_modelo: parseFloat(document.getElementById('model-confidence-main').textContent.replace('%', '')) / 100,
+                feedback_usuario: feedback.value,
+                observacoes: observacoes,
+                usuario: 'usuario_frontend',
+                contexto: 'analise_semantica'
+            };
+            
+            // Enviar para o backend
+            fetch(API_BASE + '/api/feedback/salvar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dadosFeedback)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Feedback salvo com sucesso!', 'success');
+                    limparFormularioTreinamentoMain();
+                    carregarEstatisticasTreinamentoMain(); // Atualizar estatísticas
+                } else {
+                    showToast(`Erro ao salvar feedback: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar feedback:', error);
+                showToast('Erro ao salvar feedback. Tente novamente.', 'error');
+            });
+        }
+        
+        function limparFormularioTreinamentoMain() {
+            // Limpar todos os campos do formulário principal
+            document.getElementById('training-texto-main').value = '';
+            document.getElementById('training-observacoes-main').value = '';
+            
+            // Limpar radio buttons
+            document.querySelectorAll('input[name="correct-classification-main"]').forEach(radio => {
+                radio.checked = false;
+            });
+            document.querySelectorAll('input[name="feedback-main"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Limpar resultados do modelo
+            document.getElementById('model-classification-main').textContent = '-';
+            document.getElementById('model-confidence-main').textContent = '-';
+            document.getElementById('model-score-main').textContent = '-';
+            
+            // Limpar justificativa
+            const justificationBox = document.getElementById('model-justification-main');
+            justificationBox.className = 'justification-box';
+            justificationBox.innerHTML = '<p>Clique em "Aplicar Classificação do Modelo" para ver a análise...</p>';
+        }
+        
+        // ========================================
+        // ===== TRAINING SYSTEM FUNCTIONS =======
+        // ========================================
+        
+        async function loadTrainingData() {
+            try {
+                // Carregar status dos modelos
+                await loadModelsStatus();
+                
+                // Carregar estatísticas de feedback
+                await loadFeedbackStats();
+                
+                // Carregar histórico de treinamentos
+                await loadTrainingHistory();
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados de treinamento:', error);
+                showToast('Erro ao carregar dados de treinamento', 'error');
+            }
+        }
+        
+        async function loadModelsStatus() {
+            try {
+                const response = await fetch('/api/training/status');
+                const data = await response.json();
+                
+                if (data.models) {
+                    updateModelStatus('semantic', data.models.semantic);
+                    updateModelStatus('routes', data.models.routes);
+                    updateModelStatus('hybrid', data.models.hybrid);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar status dos modelos:', error);
+            }
+        }
+        
+        function updateModelStatus(modelType, status) {
+            const statusElement = document.getElementById(`${modelType}-status`);
+            const lastTrainedElement = document.getElementById(`${modelType}-last-trained`);
+            const accuracyElement = document.getElementById(`${modelType}-accuracy`);
+            const trainBtn = document.getElementById(`train-${modelType}-btn`);
+            
+            if (statusElement) {
+                if (status.exists) {
+                    statusElement.textContent = 'Pronto';
+                    statusElement.className = 'status-badge status-ready';
+                } else {
+                    statusElement.textContent = 'Não Treinado';
+                    statusElement.className = 'status-badge status-missing';
+                }
+            }
+            
+            if (lastTrainedElement && status.metadata) {
+                lastTrainedElement.textContent = status.metadata.trained_at || 'Nunca';
+            }
+            
+            if (accuracyElement && status.metadata) {
+                accuracyElement.textContent = status.metadata.accuracy || 'N/A';
+            }
+            
+            if (trainBtn) {
+                trainBtn.disabled = false;
+            }
+        }
+        
+        async function loadFeedbackStats() {
+            try {
+                const response = await fetch('/api/feedback/stats');
+                const data = await response.json();
+                
+                document.getElementById('total-feedbacks-training').textContent = data.total || 0;
+                document.getElementById('feedbacks-corretos-training').textContent = data.feedback_counts?.correto || 0;
+                document.getElementById('feedbacks-incorretos-training').textContent = data.feedback_counts?.incorreto || 0;
+                document.getElementById('feedbacks-duvidosos-training').textContent = data.feedback_counts?.duvidoso || 0;
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas de feedback:', error);
+            }
+        }
+        
+        async function loadTrainingHistory() {
+            try {
+                const response = await fetch('/api/training/history');
+                const data = await response.json();
+                
+                const historyContainer = document.getElementById('training-history');
+                if (data.history && data.history.length > 0) {
+                    historyContainer.innerHTML = data.history.map(item => `
+                        <div class="history-item">
+                            <div class="history-header">
+                                <span class="history-model">${item.model_type}</span>
+                                <span class="history-status ${item.status}">${item.status}</span>
+                            </div>
+                            <div class="history-date">${item.trained_at}</div>
+                            <div class="history-details">${item.details || ''}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    historyContainer.innerHTML = '<p>Nenhum treinamento realizado ainda.</p>';
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar histórico:', error);
+                document.getElementById('training-history').innerHTML = '<p>Erro ao carregar histórico.</p>';
+            }
+        }
+        
+        async function trainModel(modelType) {
+            const trainBtn = document.getElementById(`train-${modelType}-btn`);
+            const originalText = trainBtn.innerHTML;
+            
+            try {
+                // Mostrar loading
+                trainBtn.disabled = true;
+                trainBtn.classList.add('loading');
+                trainBtn.innerHTML = '<span class="loading-spinner"></span> Treinando...';
+                
+                // Atualizar status
+                const statusElement = document.getElementById(`${modelType}-status`);
+                statusElement.textContent = 'Treinando';
+                statusElement.className = 'status-badge status-training';
+                
+                // Executar treinamento
+                const response = await fetch(`/api/training/train/${modelType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`Treinamento do modelo ${modelType} concluído com sucesso!`, 'success');
+                    
+                    // Recarregar dados
+                    await loadTrainingData();
+                    
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido no treinamento');
+                }
+                
+            } catch (error) {
+                console.error('Erro no treinamento:', error);
+                showToast(`Erro no treinamento: ${error.message}`, 'error');
+                
+                // Restaurar status
+                const statusElement = document.getElementById(`${modelType}-status`);
+                statusElement.textContent = 'Erro';
+                statusElement.className = 'status-badge status-error';
+                
+            } finally {
+                // Restaurar botão
+                trainBtn.disabled = false;
+                trainBtn.classList.remove('loading');
+                trainBtn.innerHTML = originalText;
+            }
+        }
+        
+        async function validateTrainingData() {
+            const validateBtn = document.getElementById('validate-data-btn');
+            const originalText = validateBtn.innerHTML;
+            
+            try {
+                validateBtn.disabled = true;
+                validateBtn.innerHTML = '<span class="loading-spinner"></span> Validando...';
+                
+                const response = await fetch('/api/training/feedback/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model_type: 'semantic' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayValidationResults(result.validation);
+                } else {
+                    throw new Error(result.error || 'Erro na validação');
+                }
+                
+            } catch (error) {
+                console.error('Erro na validação:', error);
+                showToast(`Erro na validação: ${error.message}`, 'error');
+                
+            } finally {
+                validateBtn.disabled = false;
+                validateBtn.innerHTML = originalText;
+            }
+        }
+        
+        function displayValidationResults(validation) {
+            const resultsContainer = document.getElementById('validation-results');
+            
+            let html = '<h4>Resultados da Validação</h4>';
+            
+            if (validation.valid) {
+                html += '<div class="validation-item valid"><span class="icon">✅</span>Dados válidos para treinamento</div>';
+            } else {
+                html += '<div class="validation-item invalid"><span class="icon">❌</span>Dados inválidos</div>';
+            }
+            
+            if (validation.issues && validation.issues.length > 0) {
+                html += '<h5>Problemas encontrados:</h5>';
+                validation.issues.forEach(issue => {
+                    html += `<div class="validation-item warning"><span class="icon">⚠️</span>${issue}</div>`;
+                });
+            }
+            
+            if (validation.stats) {
+                html += '<h5>Estatísticas:</h5>';
+                html += `<div class="validation-item"><span class="icon">📊</span>Total de amostras: ${validation.stats.total_samples}</div>`;
+                html += `<div class="validation-item"><span class="icon">📈</span>Classes: ${Object.entries(validation.stats.classes).map(([k,v]) => `${k}: ${v}`).join(', ')}</div>`;
+                html += `<div class="validation-item"><span class="icon">📏</span>Tamanho médio do texto: ${Math.round(validation.stats.avg_text_length)} caracteres</div>`;
+            }
+            
+            resultsContainer.innerHTML = html;
+            resultsContainer.style.display = 'block';
+        }
+        
+        async function prepareTrainingData() {
+            const prepareBtn = document.getElementById('prepare-data-btn');
+            const originalText = prepareBtn.innerHTML;
+            
+            try {
+                prepareBtn.disabled = true;
+                prepareBtn.innerHTML = '<span class="loading-spinner"></span> Preparando...';
+                
+                const response = await fetch('/api/training/feedback/prepare', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model_type: 'semantic' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`Dados preparados: ${result.samples} amostras disponíveis`, 'success');
+                } else {
+                    throw new Error(result.error || 'Erro ao preparar dados');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao preparar dados:', error);
+                showToast(`Erro ao preparar dados: ${error.message}`, 'error');
+                
+            } finally {
+                prepareBtn.disabled = false;
+                prepareBtn.innerHTML = originalText;
+            }
+        }
+
+    </script>
+        </div> <!-- main-content -->
+    </div> <!-- app-layout -->
+</body>
+</html>

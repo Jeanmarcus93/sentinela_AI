@@ -42,10 +42,12 @@ def create_app(config_name=None):
     
     # Permitir requisições do frontend
     allowed_origins = [
-        "http://localhost:3000",    # Frontend dev
+        "http://localhost:3000",    # Frontend dev (webpack dev server)
         "http://127.0.0.1:3000",   # Frontend dev alt
         "http://localhost:8080",    # Frontend prod local
-        "http://127.0.0.1:8080"    # Frontend prod alt
+        "http://127.0.0.1:8080",   # Frontend prod alt
+        "http://localhost:3001",    # Frontend dev alternativo
+        "http://127.0.0.1:3001"    # Frontend dev alternativo alt
     ]
     
     # Em produção, adicionar domínios específicos
@@ -53,13 +55,38 @@ def create_app(config_name=None):
         production_origins = os.environ.get('ALLOWED_ORIGINS', '').split(',')
         allowed_origins.extend([origin.strip() for origin in production_origins if origin.strip()])
     
-    CORS(app, resources={
+    # Configuração CORS mais flexível para desenvolvimento
+    cors_config = {
         r"/api/*": {
             "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "supports_credentials": True
+        },
+        r"/health": {
+            "origins": allowed_origins,
+            "methods": ["GET", "OPTIONS"],
+            "allow_headers": ["Content-Type", "X-Requested-With"]
+        },
+        r"/info": {
+            "origins": allowed_origins,
+            "methods": ["GET", "OPTIONS"],
+            "allow_headers": ["Content-Type", "X-Requested-With"]
         }
-    })
+    }
+    
+    # Em desenvolvimento, permitir todas as origins para facilitar testes
+    if flask_env == 'development':
+        cors_config = {
+            r"/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+                "supports_credentials": False
+            }
+        }
+    
+    CORS(app, resources=cors_config)
     
     # ==========================================
     # LOGGING
@@ -108,6 +135,18 @@ def create_app(config_name=None):
         print("   As rotas /api/v2/ não estarão disponíveis")
         app.logger.warning(f"Sistema de agentes não pôde ser carregado: {e}")
         app.config['AGENTS_AVAILABLE'] = False
+    
+    # Blueprint TREINAMENTO (sistema de treinamento de modelos)
+    try:
+        from app.routes.training_routes import training_bp
+        app.register_blueprint(training_bp)
+        print("✅ Sistema de Treinamento (training_bp) registrado em /api/training/")
+        app.config['TRAINING_AVAILABLE'] = True
+    except ImportError as e:
+        print(f"⚠️ Sistema de Treinamento não disponível: {e}")
+        print("   As rotas /api/training/ não estarão disponíveis")
+        app.logger.warning(f"Sistema de treinamento não pôde ser carregado: {e}")
+        app.config['TRAINING_AVAILABLE'] = False
     
     # ==========================================
     # ERROR HANDLERS
@@ -232,7 +271,15 @@ def create_app(config_name=None):
                     "batch": "/api/v2/analyze/batch",
                     "health": "/api/v2/health",
                     "stats": "/api/v2/stats"
-                } if app.config.get('AGENTS_AVAILABLE') else "not_available"
+                } if app.config.get('AGENTS_AVAILABLE') else "not_available",
+                "training": {
+                    "status": "/api/training/status",
+                    "models": "/api/training/models",
+                    "train": "/api/training/train/<model_type>",
+                    "prepare_data": "/api/training/feedback/prepare",
+                    "validate_data": "/api/training/feedback/validate",
+                    "history": "/api/training/history"
+                } if app.config.get('TRAINING_AVAILABLE') else "not_available"
             },
             "agents_system": agents_info,
             "frontend_urls": allowed_origins if app.debug else ["configured_in_production"]

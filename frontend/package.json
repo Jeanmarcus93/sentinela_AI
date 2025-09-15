@@ -1,0 +1,32 @@
+{
+  "name": "sentinela-ia-frontend",
+  "version": "2.0.0",
+  "description": "Frontend do Sistema de Análise de Placas",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "lint": "eslint src/js/**/*.js",
+    "format": "prettier --write src/js/**/*.js"
+  },
+  "dependencies": {
+    "axios": "^1.5.0",
+    "plotly.js": "^2.26.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "babel-loader": "^9.1.0",
+    "css-loader": "^6.8.0",
+    "eslint": "^8.53.0",
+    "html-webpack-plugin": "^5.5.0",
+    "prettier": "^3.0.0",
+    "style-loader": "^3.3.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.0",
+    "webpack-dev-server": "^5.2.2"
+  },
+  "author": "Sentinela IA Team",
+  "license": "MIT"
+}
