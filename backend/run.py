@@ -3,8 +3,13 @@ import sys
 from app import create_app
 from config.settings import criar_tabelas
 
-# Importe o novo blueprint de feedback
-from app.routes.analise_routes import feedback_bp
+# Importe o novo blueprint de feedback (se disponível)
+try:
+    from app.routes.analise_routes import feedback_bp
+    FEEDBACK_BP_AVAILABLE = True
+except ImportError:
+    feedback_bp = None
+    FEEDBACK_BP_AVAILABLE = False
 
 app = create_app()
 
@@ -74,8 +79,10 @@ if __name__ == '__main__':
         
         app = create_app()
 
-        # Registre o novo blueprint
-        app.register_blueprint(feedback_bp)
+        # Registre o novo blueprint (se disponível)
+        if FEEDBACK_BP_AVAILABLE:
+            app.register_blueprint(feedback_bp)
+            print("✅ Blueprint de feedback registrado")
         
         # 3. Inicializar sistema de agentes (nova funcionalidade)
         sistema_agentes_ok = inicializar_sistema_agentes()

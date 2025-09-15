@@ -827,3 +827,133 @@ def listar_feedbacks():
     except Exception as e:
         print(f"ERRO em listar_feedbacks: {e}")
         return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
+
+@main_bp.route('/api/passagem/test', methods=['GET'])
+def api_test_passagem():
+    """Endpoint de teste simples"""
+    return jsonify({"success": True, "message": "Endpoint funcionando"})
+
+@main_bp.route('/api/passagem/status', methods=['PUT'])
+def api_update_passagem_status():
+    """Atualiza o status ilícito de uma passagem (ida ou volta)"""
+    try:
+        print("DEBUG: Endpoint /api/passagem/status chamado")
+        
+        # Verificar se há dados JSON
+        if not request.is_json:
+            print("DEBUG: Requisição não é JSON")
+            return jsonify({"error": "Content-Type deve ser application/json"}), 400
+        
+        data = request.get_json()
+        print(f"DEBUG: Dados recebidos: {data}")
+        
+        if not data:
+            print("DEBUG: Dados vazios")
+            return jsonify({"error": "Dados JSON não fornecidos"}), 400
+        
+        passagem_id = data.get('passagem_id')
+        tipo = data.get('tipo')  # 'ida' ou 'volta'
+        ilicito = data.get('ilicito')
+        
+        print(f"DEBUG: passagem_id={passagem_id}, tipo={tipo}, ilicito={ilicito}")
+        
+        if not all([passagem_id, tipo, ilicito is not None]):
+            return jsonify({"error": "Campos obrigatórios faltando."}), 400
+        
+        if tipo not in ['ida', 'volta']:
+            return jsonify({"error": "Tipo deve ser 'ida' ou 'volta'."}), 400
+        
+        # Determinar qual coluna atualizar
+        column = 'ilicito_ida' if tipo == 'ida' else 'ilicito_volta'
+        
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Verificar se a passagem existe
+                cur.execute("SELECT id FROM passagens WHERE id = %s", (passagem_id,))
+                if not cur.fetchone():
+                    return jsonify({"error": "Passagem não encontrada."}), 404
+                
+                # Atualizar o status
+                cur.execute(f"UPDATE passagens SET {column} = %s WHERE id = %s", 
+                           (ilicito, passagem_id))
+                
+                conn.commit()
+                print(f"DEBUG: Status atualizado com sucesso para passagem {passagem_id}")
+                
+                return jsonify({
+                    "success": True,
+                    "message": f"Status {tipo} atualizado com sucesso.",
+                    "passagem_id": passagem_id,
+                    "tipo": tipo,
+                    "ilicito": ilicito
+                })
+                
+    except Exception as e:
+        print(f"ERRO em api_update_passagem_status: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Ocorreu um erro interno no servidor: {str(e)}"}), 500
+
+@main_bp.route('/api/passagem/status/batch', methods=['PUT'])
+@main_bp.route('/passagem/status/batch', methods=['PUT'])  # Endpoint alternativo sem /api
+def api_update_passagem_status_batch():
+    """Atualiza o status ilícito de múltiplas passagens em lote"""
+    try:
+        data = request.get_json()
+        print(f"DEBUG: Dados em lote recebidos: {data}")
+        
+        updates = data.get('updates', [])
+        if not updates:
+            return jsonify({"error": "Lista de atualizações vazia."}), 400
+        
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                success_count = 0
+                errors = []
+                
+                for update in updates:
+                    try:
+                        passagem_id = update.get('passagem_id')
+                        tipo = update.get('tipo')
+                        ilicito = update.get('ilicito')
+                        
+                        if not all([passagem_id, tipo, ilicito is not None]):
+                            errors.append(f"Campos obrigatórios faltando para passagem {passagem_id}")
+                            continue
+                        
+                        if tipo not in ['ida', 'volta']:
+                            errors.append(f"Tipo inválido para passagem {passagem_id}: {tipo}")
+                            continue
+                        
+                        # Determinar qual coluna atualizar
+                        column = 'ilicito_ida' if tipo == 'ida' else 'ilicito_volta'
+                        
+                        # Verificar se a passagem existe
+                        cur.execute("SELECT id FROM passagens WHERE id = %s", (passagem_id,))
+                        if not cur.fetchone():
+                            errors.append(f"Passagem {passagem_id} não encontrada")
+                            continue
+                        
+                        # Atualizar o status
+                        cur.execute(f"UPDATE passagens SET {column} = %s WHERE id = %s", 
+                                   (ilicito, passagem_id))
+                        success_count += 1
+                        
+                    except Exception as e:
+                        errors.append(f"Erro ao atualizar passagem {passagem_id}: {str(e)}")
+                
+                conn.commit()
+                
+                return jsonify({
+                    "success": True,
+                    "message": f"Atualização em lote concluída. {success_count} sucessos, {len(errors)} erros.",
+                    "success_count": success_count,
+                    "error_count": len(errors),
+                    "errors": errors
+                })
+                
+    except Exception as e:
+        print(f"ERRO em api_update_passagem_status_batch: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
